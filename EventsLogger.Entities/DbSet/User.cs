@@ -1,19 +1,23 @@
+using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Identity;
+
+
 namespace EventsLogger.Entities.DbSet;
 
-public class User : BaseEntity
+public class User : IdentityUser
 {
     public User()
     {
         Entries = new HashSet<Entry>();
         UserProjects = new HashSet<UserProject>();
     }
+    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedDate { get; set; } = DateTime.UtcNow;
+    public int Status { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
-    public string Role { get; set; } = string.Empty;
     public string PhotoPath { get; set; } = string.Empty;
-    public virtual ICollection<Entry> Entries { get; set; }
-    public virtual ICollection<UserProject> UserProjects { get; set; }
+    public ICollection<Entry> Entries { get; set; }
+    public ICollection<UserProject> UserProjects { get; set; }
 
 
 }

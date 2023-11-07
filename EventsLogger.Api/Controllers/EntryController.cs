@@ -3,6 +3,8 @@ using EventsLogger.DataService.Repositories.Interfaces;
 using EventsLogger.Entities.DbSet;
 using EventsLogger.Entities.Dtos.Requests;
 using EventsLogger.Entities.Dtos.Response;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
@@ -21,8 +23,10 @@ public class EntryAPIController : BaseController
         _response = new();
     }
 
+
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> GetEntries()
     {
         try
@@ -39,7 +43,6 @@ public class EntryAPIController : BaseController
         }
         return _response;
     }
-
 
 
     [HttpGet("{id:guid}", Name = "GetEntry")]
@@ -67,7 +70,6 @@ public class EntryAPIController : BaseController
         }
         return _response;
     }
-
 
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]

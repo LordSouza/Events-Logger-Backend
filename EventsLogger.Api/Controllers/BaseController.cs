@@ -1,6 +1,5 @@
 using AutoMapper;
 using EventsLogger.DataService.Repositories.Interfaces;
-using EventsLogger.Entities.DbSet;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventsLogger.Api.Controllers;

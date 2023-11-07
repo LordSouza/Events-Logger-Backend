@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace FormulaOne.DataService.Repositories
 {
-    public class UnitOfWork : IUnitOfWork, IDisposable
+    public class UnitOfWork : IUnitOfWork
     {
 
         private readonly AppDbContext _context;
@@ -36,10 +36,10 @@ namespace FormulaOne.DataService.Repositories
             return result > 0;
         }
 
-        public void Dispose()
-        {
-            _context.Dispose();
-        }
+        // public void Dispose()
+        // {
+        //     _context.Dispose();
+        // }
 
     }
 
