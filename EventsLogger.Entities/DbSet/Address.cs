@@ -4,12 +4,12 @@ namespace EventsLogger.Entities.DbSet;
 
 public class Address : BaseEntity
 {
-    public string? Street { get; set; }
-    public string? City { get; set; }
-    public string? State { get; set; }
-    public string? ZipCode { get; set; }
-    public string? Country { get; set; }
+    public string Street { get; set; } = string.Empty;
+    public string City { get; set; } = string.Empty;
+    public string State { get; set; } = string.Empty;
+    public string ZipCode { get; set; } = string.Empty;
+    public string Country { get; set; } = string.Empty;
     [ForeignKey("Project")]
     public Guid ProjectId { get; set; }
-    public virtual required Project Project { get; set; }
+    public required Project Project { get; set; }
 }

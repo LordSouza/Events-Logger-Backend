@@ -1,15 +1,16 @@
 using EventsLogger.Entities.DbSet;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace EventsLogger.DataService.Data
 {
-    public class AppDbContext : DbContext
+    public class AppDbContext : IdentityDbContext<User>
     {
-        public virtual DbSet<User> Users { get; set; }
-        public virtual DbSet<Project> Projects { get; set; }
-        public virtual DbSet<Entry> Entrys { get; set; }
-        public virtual DbSet<Address> Addresses { get; set; }
-        public virtual DbSet<UserProject> UsersProjects { get; set; }
+        public override DbSet<User> Users { get; set; }
+        public DbSet<Project> Projects { get; set; }
+        public DbSet<Entry> Entrys { get; set; }
+        public DbSet<Address> Addresses { get; set; }
+        public DbSet<UserProject> UsersProjects { get; set; }
 
 
         public AppDbContext(DbContextOptions options) : base(options) { }
@@ -38,9 +39,10 @@ namespace EventsLogger.DataService.Data
                 .HasMany(d => d.UserProjects)
                 .WithOne(p => p.Project);
             });
-            modelBuilder.Entity<Entry>().HasKey(
-                r => new { r.UserId, r.ProjectId }
-                );
+            modelBuilder.Entity<Entry>(entity =>
+            {
+                entity.HasKey(r => new { r.UserId, r.ProjectId });
+            });
             modelBuilder.Entity<UserProject>().HasKey(
                 r => new { r.UserId, r.ProjectId }
                 );
