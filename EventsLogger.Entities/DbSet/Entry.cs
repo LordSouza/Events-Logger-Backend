@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace EventsLogger.Entities.DbSet;
 
 public class Entry : BaseEntity
@@ -9,9 +11,11 @@ public class Entry : BaseEntity
     public string Description { get; set; } = string.Empty;
     public List<string> FilesUrl { get; set; }
 
-    public virtual Guid UserId { get; set; }
-    public virtual required User User { get; set; }
-    public virtual Guid ProjectId { get; set; }
-    public virtual required Project Project { get; set; }
+    [ForeignKey("User")]
+    public string UserId { get; set; } = string.Empty;
+    public required User User { get; set; }
+    [ForeignKey("Project")]
+    public Guid ProjectId { get; set; }
+    public required Project Project { get; set; }
 
 }

@@ -44,7 +44,7 @@ public class Repository<T> : IRepository<T> where T : class
                 query = query.Include(includePro);
             }
         }
-        
+
         return await query.FirstOrDefaultAsync();
     }
 

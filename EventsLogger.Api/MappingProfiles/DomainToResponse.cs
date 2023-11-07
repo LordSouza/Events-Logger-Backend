@@ -11,8 +11,8 @@ public class DomainToResponse : Profile
         CreateMap<User, UserDTO>();
         CreateMap<Address, AddressDTO>();
         CreateMap<Project, ProjectDTO>();
+        CreateMap<Project, ProjectNameDTO>();
         CreateMap<Entry, EntryDTO>();
         CreateMap<UserProject, UserProjectDTO>();
-
     }
 }

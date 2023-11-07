@@ -1,7 +1,12 @@
+using System.Text;
+using EventsLogger.Api.Configuration;
 using EventsLogger.DataService.Data;
 using EventsLogger.DataService.Repositories.Interfaces;
+using EventsLogger.Entities.DbSet;
 using FormulaOne.DataService.Repositories;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +16,35 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 // 
 // Initialising my DbContext inside DI Container
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+
+builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("JwtConfig"));
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(jwt =>
+{
+    var key = Encoding.ASCII.GetBytes(builder.Configuration.GetSection("JwtConfig:Secret").Value!);
+    jwt.SaveToken = true;
+    jwt.TokenValidationParameters = new TokenValidationParameters()
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ValidateIssuer = false, // for dev, change on prod
+        ValidateAudience = false, // for dev, change on prod
+        RequireExpirationTime = false, // needs to be updated // for dev, change on prod
+        ValidateLifetime = true,
+
+    };
+});
+
+builder.Services.AddDefaultIdentity<User>(options =>
+{
+    options.SignIn.RequireConfirmedAccount = false;
+}).AddEntityFrameworkStores<AppDbContext>();
 
 // CORS frontend
 var MyAllowSpecificOrigins = "_allowFrontendAccess";
@@ -36,9 +70,16 @@ builder.Services.AddControllers(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddControllers(options =>
+{
+    options.SuppressAsyncSuffixInActionNames = false;
+}).AddNewtonsoftJson();
+
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+
 
 var app = builder.Build();
 
@@ -51,8 +92,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
-
+app.UseCors(MyAllowSpecificOrigins);
 app.MapControllers();
 
 app.Run();
