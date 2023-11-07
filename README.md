@@ -1,5 +1,6 @@
 # hands-on-backend
- backend for the project Events Logger
+
+backend for the project Events Logger
 
 
 ## Commit n branch standard
