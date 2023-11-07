@@ -4,10 +4,11 @@ using EventsLogger.DataService.Repositories.Interfaces;
 using EventsLogger.Entities.DbSet;
 using EventsLogger.Entities.Dtos.Requests;
 using EventsLogger.Entities.Dtos.Response;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -33,52 +34,54 @@ public class AuthController : BaseController
         _response = new();
     }
 
-    // [HttpGet]
-    // [ProducesResponseType(StatusCodes.Status200OK)]
-    // public async Task<ActionResult<APIResponse>> GetEntries()
-    // {
-    //     try
-    //     {
-    //         IEnumerable<User> UserList = await _unitOfWork.Users.GetAllAsync();
-    //         _response.Result = _mapper.Map<List<UserDTO>>(UserList);
-    //         _response.StatusCode = HttpStatusCode.OK;
-    //         return Ok(_response);
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         _response.IsSuccess = false;
-    //         _response.Messages = new List<string> { ex.ToString() };
-    //     }
-    //     return _response;
-    // }
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    public async Task<ActionResult<APIResponse>> GetEntries()
+    {
+        try
+        {
+            IEnumerable<User> UserList = await _unitOfWork.Users.GetAllAsync();
+            _response.Result = _mapper.Map<List<UserDTO>>(UserList);
+            _response.StatusCode = HttpStatusCode.OK;
+            return Ok(_response);
+        }
+        catch (Exception ex)
+        {
+            _response.IsSuccess = false;
+            _response.Messages = new List<string> { ex.ToString() };
+        }
+        return _response;
+    }
 
 
 
-    // [HttpGet("{id:guid}", Name = "GetUser")]
-    // [ProducesResponseType(StatusCodes.Status200OK)]
-    // [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    // [ProducesResponseType(StatusCodes.Status404NotFound)]
-    // public async Task<ActionResult<APIResponse>> GetUser(Guid id)
-    // {
-    //     try
-    //     {
-    //         var User = await _unitOfWork.Users.GetAsync(u => u.Id == id.ToString());
-    //         if (User == null)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.NotFound;
-    //             return NotFound(_response);
-    //         }
-    //         _response.StatusCode = HttpStatusCode.OK;
-    //         _response.Result = _mapper.Map<UserDTO>(User);
-    //         return Ok(_response);
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         _response.IsSuccess = false;
-    //         _response.Messages = new List<string> { ex.ToString() };
-    //     }
-    //     return _response;
-    // }
+    [HttpGet("{id:guid}", Name = "GetUser")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<APIResponse>> GetUser(Guid id)
+    {
+        try
+        {
+            var User = await _unitOfWork.Users.GetAsync(u => u.Id == id.ToString());
+            if (User == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+            _response.StatusCode = HttpStatusCode.OK;
+            _response.Result = _mapper.Map<UserDTO>(User);
+            return Ok(_response);
+        }
+        catch (Exception ex)
+        {
+            _response.IsSuccess = false;
+            _response.Messages = new List<string> { ex.ToString() };
+        }
+        return _response;
+    }
 
 
     [HttpPost]
@@ -201,6 +204,7 @@ public class AuthController : BaseController
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [HttpDelete("{id:guid}", Name = "DeleteUser")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> DeleteUser(Guid id)
     {
         try
@@ -229,6 +233,7 @@ public class AuthController : BaseController
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [HttpPut("{id:guid}", Name = "UpdateUser")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> UpdateUser(Guid id, [FromBody] UpdateUserDTO updateUserDTO)
     {
         try
@@ -255,6 +260,7 @@ public class AuthController : BaseController
     }
 
     [HttpPatch("{id:guid}", Name = "UpdatePartialUser")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<APIResponse>> UpdatePartialUser(Guid id, JsonPatchDocument<UpdateUserDTO> patchDTO)
