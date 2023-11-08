@@ -5,6 +5,9 @@ namespace EventsLogger.Entities.Dtos.Requests;
 public class UserRegistrationRequestDTO
 {
     [Required]
+    public required string UserName { get; set; }
+
+    [Required]
     public required string FirstName { get; set; }
 
     [Required]

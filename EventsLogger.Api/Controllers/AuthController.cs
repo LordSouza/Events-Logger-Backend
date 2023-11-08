@@ -58,7 +58,7 @@ public class AuthController : BaseController
             {
                 Email = requestDTO.Email,
                 Name = requestDTO.FirstName + " " + requestDTO.LastName,
-                UserName = requestDTO.FirstName + "_" + requestDTO.LastName,
+                UserName = requestDTO.UserName
 
             };
 

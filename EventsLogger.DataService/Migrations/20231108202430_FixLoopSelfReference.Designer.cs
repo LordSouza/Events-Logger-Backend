@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using EventsLogger.DataService.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EventsLogger.DataService.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231108202430_FixLoopSelfReference")]
+    partial class FixLoopSelfReference
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -371,16 +374,17 @@ namespace EventsLogger.DataService.Migrations
             modelBuilder.Entity("EventsLogger.Entities.DbSet.Entry", b =>
                 {
                     b.HasOne("EventsLogger.Entities.DbSet.Project", "Project")
-                        .WithMany()
+                        .WithMany("Entries")
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("EventsLogger.Entities.DbSet.User", "User")
-                        .WithMany()
+                        .WithMany("Entries")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_User_Entry");
 
                     b.Navigation("Project");
 
@@ -401,13 +405,13 @@ namespace EventsLogger.DataService.Migrations
             modelBuilder.Entity("EventsLogger.Entities.DbSet.UserProject", b =>
                 {
                     b.HasOne("EventsLogger.Entities.DbSet.Project", "Project")
-                        .WithMany()
+                        .WithMany("UserProjects")
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("EventsLogger.Entities.DbSet.User", "User")
-                        .WithMany()
+                        .WithMany("UserProjects")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -466,6 +470,20 @@ namespace EventsLogger.DataService.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("EventsLogger.Entities.DbSet.Project", b =>
+                {
+                    b.Navigation("Entries");
+
+                    b.Navigation("UserProjects");
+                });
+
+            modelBuilder.Entity("EventsLogger.Entities.DbSet.User", b =>
+                {
+                    b.Navigation("Entries");
+
+                    b.Navigation("UserProjects");
                 });
 #pragma warning restore 612, 618
         }

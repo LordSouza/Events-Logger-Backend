@@ -9,7 +9,7 @@ content-type: application/json
     "username": "My_username",
     "firstname": "asdasdas",
     "lastname" : "asokdokas",
-    "email": "ajosndoaaajas@email.com",
+    "email": "My_username@email.com",
     "password": "sadmokasdk!2A"
 }
 
@@ -22,54 +22,8 @@ POST {{baseUrl}}/Auth/Login HTTP/1.1
 content-type: application/json
 
 {
-    "email": "ajosndoaaajas@email.com",
+    "email": "My_username@email.com",
     "password": "sadmokasdk!2A"
 }
 
 @authToken = {{login.response.body.$.result.token}}
-
-###
-# @name getUser
-GET {{baseUrl}}/User HTTP/1.1
-accept: text/plain
-Authorization: Bearer {{authToken}}
-
-
-###
-# return all users
-@queryName = all
-# return a single user according to his username
-@queryName = Joao_Silva
-@QueryProject = Project
-# @name getAnotherUser
-GET {{baseUrl}}/User?name={{queryName}} HTTP/1.1
-accept: text/plain
-Authorization: Bearer {{authToken}}
-
-
-###
-# @name deleteUser
-DELETE {{baseUrl}}/User HTTP/1.1
-accept: text/plain
-Authorization: Bearer {{authToken}}
-
-###
-# @name updateUser
-PUT {{baseUrl}}/User HTTP/1.1
-accept: text/plain
-Authorization: Bearer {{authToken}}
-content-type: application/json
-
-{    
-    "username" : "JoaoSilva2685",
-    "firstname": "Joao",
-    "lastname": "Silva",
-    "email": "ajosnaaadoaaajas@email.com",
-    "photopath": ""
-}
-
-###
-# @name allEntries
-GET {{baseUrl}}/Entry HTTP/1.1
-accept: text/plain
-Authorization: Bearer {{authToken}}

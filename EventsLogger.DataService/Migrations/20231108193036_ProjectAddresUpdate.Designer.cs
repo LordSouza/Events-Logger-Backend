@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using EventsLogger.DataService.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EventsLogger.DataService.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231108193036_ProjectAddresUpdate")]
+    partial class ProjectAddresUpdate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -44,6 +47,9 @@ namespace EventsLogger.DataService.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Street")
                         .IsRequired()
                         .HasColumnType("text");
@@ -62,8 +68,10 @@ namespace EventsLogger.DataService.Migrations
 
             modelBuilder.Entity("EventsLogger.Entities.DbSet.Entry", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedDate")
@@ -77,21 +85,18 @@ namespace EventsLogger.DataService.Migrations
                         .IsRequired()
                         .HasColumnType("text[]");
 
-                    b.Property<Guid>("ProjectId")
+                    b.Property<Guid>("Id")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
+                    b.HasKey("UserId", "ProjectId");
 
                     b.HasIndex("ProjectId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("Entrys");
                 });
@@ -111,6 +116,9 @@ namespace EventsLogger.DataService.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedDate")
                         .HasColumnType("timestamp with time zone");
@@ -178,6 +186,9 @@ namespace EventsLogger.DataService.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");
 
@@ -202,32 +213,31 @@ namespace EventsLogger.DataService.Migrations
 
             modelBuilder.Entity("EventsLogger.Entities.DbSet.UserProject", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("ProjectId")
+                    b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("UpdatedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
+                    b.HasKey("UserId", "ProjectId");
 
                     b.HasIndex("ProjectId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("UsersProjects");
                 });
@@ -377,10 +387,11 @@ namespace EventsLogger.DataService.Migrations
                         .IsRequired();
 
                     b.HasOne("EventsLogger.Entities.DbSet.User", "User")
-                        .WithMany()
+                        .WithMany("Entries")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_User_Entry");
 
                     b.Navigation("Project");
 
@@ -401,13 +412,13 @@ namespace EventsLogger.DataService.Migrations
             modelBuilder.Entity("EventsLogger.Entities.DbSet.UserProject", b =>
                 {
                     b.HasOne("EventsLogger.Entities.DbSet.Project", "Project")
-                        .WithMany()
+                        .WithMany("UserProjects")
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("EventsLogger.Entities.DbSet.User", "User")
-                        .WithMany()
+                        .WithMany("UserProjects")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -466,6 +477,18 @@ namespace EventsLogger.DataService.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("EventsLogger.Entities.DbSet.Project", b =>
+                {
+                    b.Navigation("UserProjects");
+                });
+
+            modelBuilder.Entity("EventsLogger.Entities.DbSet.User", b =>
+                {
+                    b.Navigation("Entries");
+
+                    b.Navigation("UserProjects");
                 });
 #pragma warning restore 612, 618
         }

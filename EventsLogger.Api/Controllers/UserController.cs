@@ -186,6 +186,9 @@ public class UserController : BaseController
                 _response.StatusCode = HttpStatusCode.NotFound;
                 return NotFound(_response);
             }
+
+            
+
             profile.Name = updateUserDTO.FirstName + " " + updateUserDTO.LastName;
             profile.Email = updateUserDTO.Email;
             profile.PhotoPath = updateUserDTO.PhotoPath;

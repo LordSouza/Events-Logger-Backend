@@ -1,0 +1,32 @@
+
+@baseUrl  = http://localhost:5275/api
+@authToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImRhYTI0YjNmLWUxZWQtNDM1ZC1iOGZmLTRhMDYxOTcwZmUyMiIsIm5hbWVpZCI6ImRhYTI0YjNmLWUxZWQtNDM1ZC1iOGZmLTRhMDYxOTcwZmUyMiIsImVtYWlsIjoiTXlfdXNlcm5hbWVAZW1haWwuY29tIiwianRpIjoiOWNiNjBlMjQtZTUxNS00NWU5LWFhNjktZTkzNjY2MGE2NjE1IiwiaWF0IjoxNjk5NDczOTE5LCJuYmYiOjE2OTk0NzM5MTksImV4cCI6MTY5OTQ4ODMxOX0.wZqh75TFQ7FsYi4tZ91gyneAaox5jZ9qeNYlMczbXWk
+
+###
+# @name createProject
+POST {{baseUrl}}/Project HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+    "name" : "Big House",
+    "address": {
+        "street":"Av. B P S, 1303",
+        "city":"Itajubá",
+        "state":"Minas Gerais",
+        "zipcode":"37500-903",
+        "country":"Brasil",
+    }
+}
+
+
+###
+# @name getProject
+GET {{baseUrl}}/Project HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+    "id" : "21cd27fb-0765-43b8-a347-7cea2c30688b"
+}
+

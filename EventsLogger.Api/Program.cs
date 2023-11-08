@@ -11,11 +11,14 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 
 
+
+
 // Get Connection String
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 // 
 // Initialising my DbContext inside DI Container
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+
 
 builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("JwtConfig"));
 
