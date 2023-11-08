@@ -9,6 +9,7 @@ public class DomainToResponse : Profile
     public DomainToResponse()
     {
         CreateMap<User, UserDTO>();
+        CreateMap<User, UserProjectRoleDTO>();
         CreateMap<Address, AddressDTO>();
         CreateMap<Project, ProjectDTO>();
         CreateMap<Project, ProjectNameDTO>();

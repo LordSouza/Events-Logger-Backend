@@ -22,11 +22,26 @@ Authorization: Bearer {{authToken}}
 
 ###
 # @name getProject
-GET {{baseUrl}}/Project HTTP/1.1
+GET {{baseUrl}}/Project/GetProjectById HTTP/1.1
 content-type: application/json
 Authorization: Bearer {{authToken}}
 
 {
-    "id" : "21cd27fb-0765-43b8-a347-7cea2c30688b"
+    "id" : "4c504c5b-0d18-4dc7-8f4b-ef30bc56f0d1",
 }
+
+
+
+###
+# @name addUserProject
+POST {{baseUrl}}/Project/AddUser HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+    "userid" : "daa24b3f-e1ed-435d-b8ff-4a061970fe22",
+    "projectid" : "4c504c5b-0d18-4dc7-8f4b-ef30bc56f0d1",
+    "role": "worker"
+}
+
 

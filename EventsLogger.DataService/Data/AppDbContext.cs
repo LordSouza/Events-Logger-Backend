@@ -18,16 +18,15 @@ namespace EventsLogger.DataService.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
             modelBuilder.Entity<Entry>(entity =>
             {
                 entity.HasOne(d => d.User);
                 entity.HasOne(d => d.Project);
             });
-            modelBuilder.Entity<UserProject>(entity =>
-            {
-                entity.HasOne(d => d.User);
-                entity.HasOne(d => d.Project);
-            });
+            modelBuilder.Entity<UserProject>().HasKey(
+                r => new { r.UserId, r.ProjectId }
+                );
         }
 
     }

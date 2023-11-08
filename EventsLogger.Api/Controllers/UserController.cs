@@ -23,24 +23,7 @@ public class UserController : BaseController
         _response = new();
     }
 
-
-    /// <summary>
-    /// Get self data if no query is made
-    /// 
-    /// if name = all 
-    /// {     
-    ///     query all users
-    ///}
-    /// 
-    /// if name = {username} 
-    /// {
-    ///     query user with username      
-    /// }
-    /// </summary>
-    /// <param name="username"></param>
-    /// <param name="project"></param>
-    /// <returns></returns>
-    [HttpGet]
+    [HttpGet("All", Name = "GetAll")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
@@ -88,8 +71,67 @@ public class UserController : BaseController
             //     return Ok(_response);
             // }
 
+            UserDTO profileDTO = _mapper.Map<UserDTO>(profile);
+
             _response.StatusCode = HttpStatusCode.OK;
-            _response.Result = _mapper.Map<UserDTO>(profile);
+            _response.Result = profileDTO;
+            return Ok(_response);
+        }
+        catch (Exception ex)
+        {
+            _response.IsSuccess = false;
+            _response.Messages = new List<string> { ex.ToString() };
+        }
+        return _response;
+    }
+
+
+    /// <summary>
+    /// Get self data if no query is made
+    /// 
+    /// if name = all 
+    /// {     
+    ///     query all users
+    ///}
+    /// 
+    /// if name = {username} 
+    /// {
+    ///     query user with username      
+    /// }
+    /// </summary>
+    /// <param name="username"></param>
+    /// <param name="project"></param>
+    /// <returns></returns>
+    [HttpGet(Name = "GetUserByUsername")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    public async Task<ActionResult<APIResponse>> GetUser([FromQuery(Name = "UserName")] string? username)
+    {
+        try
+        {
+
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+
+            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
+            if (profile == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+            User UserList;
+            // IEnumerable<UserProject> UserProjectList;
+
+            UserList = await _unitOfWork.Users.GetAsync(u => u.UserName == username);
+
+            _response.Result = _mapper.Map<List<UserDTO>>(UserList);
+            _response.StatusCode = HttpStatusCode.OK;
+            UserDTO profileDTO = _mapper.Map<UserDTO>(profile);
             return Ok(_response);
         }
         catch (Exception ex)
@@ -187,7 +229,7 @@ public class UserController : BaseController
                 return NotFound(_response);
             }
 
-            
+
 
             profile.Name = updateUserDTO.FirstName + " " + updateUserDTO.LastName;
             profile.Email = updateUserDTO.Email;

@@ -1,6 +1,5 @@
 @baseUrl  = http://localhost:5275/api
-@authToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjA2NDUwZjYxLThhMzItNDNhZi04MzI0LWY3MTc2M2U2MmU2YiIsIm5hbWVpZCI6IjA2NDUwZjYxLThhMzItNDNhZi04MzI0LWY3MTc2M2U2MmU2YiIsImVtYWlsIjoiTXlfdXNlcm5hbWVAZW1haWwuY29tIiwianRpIjoiZTJhMjQ3MDMtOGUwYS00YTBmLWJlMDktN2MxYWEyMmQ2YTQ0IiwiaWF0IjoxNjk5NDcwNjQyLCJuYmYiOjE2OTk0NzA2NDIsImV4cCI6MTY5OTQ4NTA0Mn0.N5R9jN8rGQ-do_i0aHxSk4HYnPi4R2y6FFu5lam9FNw
-
+@authToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImRhYTI0YjNmLWUxZWQtNDM1ZC1iOGZmLTRhMDYxOTcwZmUyMiIsIm5hbWVpZCI6ImRhYTI0YjNmLWUxZWQtNDM1ZC1iOGZmLTRhMDYxOTcwZmUyMiIsImVtYWlsIjoiTXlfdXNlcm5hbWVAZW1haWwuY29tIiwianRpIjoiN2E2YjI2ODYtNmZiZS00ZDNjLTk1NmUtNWYwNGI2ZDlhY2QzIiwiaWF0IjoxNjk5NDgwOTQ4LCJuYmYiOjE2OTk0ODA5NDgsImV4cCI6MTY5OTQ5NTM0OH0.NKBr4NPKWXpXwOPprQAp61sebJczLCSiDhZcR47GNXQ
 
 
 ###
@@ -19,7 +18,7 @@ Authorization: Bearer {{authToken}}
 
 
 # @name getAnotherUser
-GET {{baseUrl}}/User?username={{queryName}} HTTP/1.1
+GET {{baseUrl}}/User/all?username={{queryName}} HTTP/1.1
 accept: text/plain
 Authorization: Bearer {{authToken}}
 

@@ -60,19 +60,52 @@ public class ProjectAPIController : BaseController
     //     return _response;
     // }
 
-    [HttpPost("AddUser/{id:guid}", Name = "AddUser")]
+    [HttpPost("AddUser", Name = "AddUser")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<ActionResult<APIResponse>> AddUser(Guid id, [FromBody] CreateUserProjectDTO createUserProjectDTO)
+    public async Task<ActionResult<APIResponse>> AddUser([FromBody] CreateUserProjectDTO createUserProjectDTO)
     {
         try
         {
-            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == id, includeProperties: "Address");
+            if (!ModelState.IsValid)
+            {
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
+            }
+
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+
+            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
+            if (profile == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+
+            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == createUserProjectDTO.ProjectId);
             if (project == null)
             {
                 _response.StatusCode = HttpStatusCode.NotFound;
                 return NotFound(_response);
+            }
+            List<UserProject> userProject = await _unitOfWork.UsersProjects.GetAllAsync(u => u.ProjectId == project.Id);
+            if (userProject != null)
+            {
+                foreach (var relation in userProject)
+                {
+                    if (relation.UserId == createUserProjectDTO.UserId.ToString())
+                    {
+                        _response.StatusCode = HttpStatusCode.NotFound;
+                        _response.Messages.Add("User Already in this project");
+                        return BadRequest(_response);
+                    }
+                }
             }
             UserProject relationship = _mapper.Map<UserProject>(createUserProjectDTO);
             await _unitOfWork.UsersProjects.CreateAsync(relationship);
@@ -93,26 +126,55 @@ public class ProjectAPIController : BaseController
 
 
 
-    [HttpGet(Name = "GetProject")]
+    [HttpGet("GetProjectById", Name = "GetProjectById")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<APIResponse>> GetProject([FromBody] string id)
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    public async Task<ActionResult<APIResponse>> GetProject([FromBody] ProjectGetDTO projectGetDTO)
     {
         try
         {
-            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == new Guid(id));
+            if (!ModelState.IsValid)
+            {
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
+            }
+
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+
+            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
+            if (profile == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+
+
+            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == projectGetDTO.Id, includeProperties: "Address");
 
             if (project == null)
             {
                 _response.StatusCode = HttpStatusCode.NotFound;
                 return NotFound(_response);
             }
-            var address = await _unitOfWork.Addresses.GetAsync(u => u.Id == project.AddressId);
 
+            ProjectDTO projectDTO = _mapper.Map<ProjectDTO>(project);
+            List<UserProject> userProject = await _unitOfWork.UsersProjects.GetAllAsync(u => u.ProjectId == projectDTO.Id);
+            List<UserProjectDTO> userProjectDTO = _mapper.Map<List<UserProjectDTO>>(userProject);
+            foreach (var item in userProjectDTO)
+            {
+                User user = await _unitOfWork.Users.GetAsync(u => u.Id == item.UserId.ToString());
+                UserProjectRoleDTO userDTO = _mapper.Map<UserProjectRoleDTO>(user);
+                userDTO.Role = item.Role;
+                projectDTO.Users.Add(userDTO);
+            }
 
-            var projectDTO = _mapper.Map<Project>(project);
-            projectDTO.Address = address;
 
             _response.StatusCode = HttpStatusCode.OK;
             _response.Result = projectDTO;
@@ -136,9 +198,6 @@ public class ProjectAPIController : BaseController
     {
         try
         {
-
-
-
             if (!ModelState.IsValid)
             {
                 _response.StatusCode = HttpStatusCode.BadRequest;
@@ -194,7 +253,7 @@ public class ProjectAPIController : BaseController
             await _unitOfWork.UsersProjects.CreateAsync(newUserProject);
 
 
-            var projectDTO = _mapper.Map<Project>(newProject);
+            ProjectDTO projectDTO = _mapper.Map<ProjectDTO>(newProject);
 
 
 
