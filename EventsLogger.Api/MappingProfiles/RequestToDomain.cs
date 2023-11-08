@@ -93,6 +93,12 @@ public class RequestToDomain : Profile
             des => des.CreatedDate,
             opt => opt.Ignore())
         .ForMember(
+            dest => dest.Name,
+            opt => opt.MapFrom(src => src.FirstName + " " + src.LastName))
+        .ForMember(
+            dest => dest.UserName,
+            opt => opt.MapFrom(src => src.FirstName + "_" + src.LastName))
+        .ForMember(
             des => des.UpdatedDate,
             opt => opt.MapFrom(src => DateTime.UtcNow));
 
