@@ -47,20 +47,12 @@ public class UserController : BaseController
             }
             IEnumerable<User> UserList;
             // IEnumerable<UserProject> UserProjectList;
-            if (username != null)
-            {
-                if (username == "all")
-                {
-                    UserList = await _unitOfWork.Users.GetAllAsync();
-                }
-                else
-                {
-                    UserList = await _unitOfWork.Users.GetAllAsync(u => u.UserName == username);
-                }
-                _response.Result = _mapper.Map<List<UserDTO>>(UserList);
-                _response.StatusCode = HttpStatusCode.OK;
-                return Ok(_response);
-            }
+            UserList = await _unitOfWork.Users.GetAllAsync();
+            // UserList = await _unitOfWork.Users.GetAllAsync(u => u.UserName == username);
+            _response.Result = _mapper.Map<List<UserDTO>>(UserList);
+            _response.StatusCode = HttpStatusCode.OK;
+            return Ok(_response);
+
             // if (project != null)
             // {
 
@@ -71,11 +63,7 @@ public class UserController : BaseController
             //     return Ok(_response);
             // }
 
-            UserDTO profileDTO = _mapper.Map<UserDTO>(profile);
 
-            _response.StatusCode = HttpStatusCode.OK;
-            _response.Result = profileDTO;
-            return Ok(_response);
         }
         catch (Exception ex)
         {
@@ -100,7 +88,6 @@ public class UserController : BaseController
     /// }
     /// </summary>
     /// <param name="username"></param>
-    /// <param name="project"></param>
     /// <returns></returns>
     [HttpGet(Name = "GetUserByUsername")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -124,12 +111,21 @@ public class UserController : BaseController
                 _response.StatusCode = HttpStatusCode.NotFound;
                 return NotFound(_response);
             }
-            User UserList;
             // IEnumerable<UserProject> UserProjectList;
+            if (username == null)
+            {
+                User self = await _unitOfWork.Users.GetAsync(u => u.UserName == profile.UserName);
 
-            UserList = await _unitOfWork.Users.GetAsync(u => u.UserName == username);
+                _response.Result = _mapper.Map<UserDTO>(self);
+                _response.StatusCode = HttpStatusCode.OK;
+                UserDTO selfDTO = _mapper.Map<UserDTO>(profile);
+                return Ok(_response);
 
-            _response.Result = _mapper.Map<List<UserDTO>>(UserList);
+            }
+
+            User userByUsername = await _unitOfWork.Users.GetAsync(u => u.UserName == username);
+
+            _response.Result = _mapper.Map<UserDTO>(userByUsername);
             _response.StatusCode = HttpStatusCode.OK;
             UserDTO profileDTO = _mapper.Map<UserDTO>(profile);
             return Ok(_response);
@@ -162,6 +158,7 @@ public class UserController : BaseController
             if (loggedUser == null)
             {
                 _response.StatusCode = HttpStatusCode.NotFound;
+                _response.IsSuccess = false;
                 return NotFound(_response);
             }
 
@@ -171,6 +168,7 @@ public class UserController : BaseController
             if (profile == null)
             {
                 _response.StatusCode = HttpStatusCode.NotFound;
+                _response.IsSuccess = false;
                 return NotFound(_response);
             }
 
@@ -179,8 +177,12 @@ public class UserController : BaseController
             if (!isPassword)
             {
                 _response.StatusCode = HttpStatusCode.NotFound;
+                _response.IsSuccess = false;
+                _response.Messages.Add("Wrong Password");
                 return NotFound(_response);
             }
+
+
             await _unitOfWork.Users.RemoveAsync(profile);
 
             _response.StatusCode = HttpStatusCode.NoContent;
@@ -258,59 +260,59 @@ public class UserController : BaseController
     /// </summary>
     /// <param name="patchDTO"></param>
     /// <returns></returns>
-    [HttpPatch(Name = "UpdatePartialUser")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<APIResponse>> UpdatePartialUser(JsonPatchDocument<UpdateUserDTO> patchDTO)
-    {
-        try
-        {
-            if (!ModelState.IsValid)
-            {
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                return BadRequest(_response);
-            }
+    // [HttpPatch(Name = "UpdatePartialUser")]
+    // [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    // [ProducesResponseType(StatusCodes.Status204NoContent)]
+    // [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    // public async Task<ActionResult<APIResponse>> UpdatePartialUser(JsonPatchDocument<UpdateUserDTO> patchDTO)
+    // {
+    //     try
+    //     {
+    //         if (!ModelState.IsValid)
+    //         {
+    //             _response.StatusCode = HttpStatusCode.BadRequest;
+    //             return BadRequest(_response);
+    //         }
 
-            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
-            if (loggedUser == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
+    //         var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+    //         if (loggedUser == null)
+    //         {
+    //             _response.StatusCode = HttpStatusCode.NotFound;
+    //             return NotFound(_response);
+    //         }
 
-            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
-            if (profile == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
+    //         var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
+    //         if (profile == null)
+    //         {
+    //             _response.StatusCode = HttpStatusCode.NotFound;
+    //             return NotFound(_response);
+    //         }
 
-            // refactor this part
-            UpdateUserDTO UserDTO = _mapper.Map<UpdateUserDTO>(User);
+    //         // refactor this part
+    //         UpdateUserDTO UserDTO = _mapper.Map<UpdateUserDTO>(User);
 
-            patchDTO.ApplyTo(UserDTO, ModelState);
+    //         patchDTO.ApplyTo(UserDTO, ModelState);
 
-            User model = _mapper.Map<User>(UserDTO);
+    //         User model = _mapper.Map<User>(UserDTO);
 
-            await _unitOfWork.Users.UpdateAsync(model);
+    //         await _unitOfWork.Users.UpdateAsync(model);
 
-            if (!ModelState.IsValid)
-            {
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                return BadRequest(_response);
-            }
-            _response.StatusCode = HttpStatusCode.NoContent;
-            _response.IsSuccess = true;
-            return Ok(_response);
-        }
-        catch (Exception ex)
-        {
-            _response.IsSuccess = false;
-            _response.Messages = new List<string> { ex.ToString() };
-        }
-        return _response;
-    }
+    //         if (!ModelState.IsValid)
+    //         {
+    //             _response.StatusCode = HttpStatusCode.BadRequest;
+    //             return BadRequest(_response);
+    //         }
+    //         _response.StatusCode = HttpStatusCode.NoContent;
+    //         _response.IsSuccess = true;
+    //         return Ok(_response);
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         _response.IsSuccess = false;
+    //         _response.Messages = new List<string> { ex.ToString() };
+    //     }
+    //     return _response;
+    // }
 
 
 }

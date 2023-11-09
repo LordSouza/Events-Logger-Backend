@@ -24,41 +24,50 @@ public class ProjectAPIController : BaseController
         _response = new();
     }
 
-    // [HttpGet]
-    // [ProducesResponseType(StatusCodes.Status200OK)]
-    // [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    // public async Task<ActionResult<APIResponse>> GetProjects()
-    // {
-    //     try
-    //     {
-    //         var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
-    //         if (loggedUser == null)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.NotFound;
-    //             return NotFound(_response);
-    //         }
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    public async Task<ActionResult<APIResponse>> GetProjects([FromQuery] bool self)
+    {
+        try
+        {
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
 
-    //         var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
-    //         if (profile == null)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.NotFound;
-    //             return NotFound(_response);
-    //         }
+            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
+            if (profile == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
 
-    //         IEnumerable<UserProject> userProjects = await _unitOfWork.UsersProjects.GetAllAsync(u => u.UserId == profile.Id);
-    //         // IEnumerable<Project> ProjectList = await _unitOfWork.Projects.GetAllAsync(includeProperties: "Address");
 
-    //         // _response.Result = _mapper.Map<List<ProjectDTO>>(ProjectList);
-    //         _response.StatusCode = HttpStatusCode.OK;
-    //         return Ok(_response);
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         _response.IsSuccess = false;
-    //         _response.Messages = new List<string> { ex.ToString() };
-    //     }
-    //     return _response;
-    // }
+            if (self)
+            {
+                IEnumerable<UserProject> userProjects = await _unitOfWork.UsersProjects.GetAllAsync(u => u.UserId == profile.Id, includeProperties: "Project");
+                _response.Result = _mapper.Map<List<UserProjectDTO>>(userProjects);
+                _response.StatusCode = HttpStatusCode.OK;
+                return Ok(_response);
+            }
+
+            IEnumerable<Project> ProjectList;
+            ProjectList = await _unitOfWork.Projects.GetAllAsync();
+
+            _response.Result = _mapper.Map<List<ProjectDTO>>(ProjectList);
+            _response.StatusCode = HttpStatusCode.OK;
+            return Ok(_response);
+        }
+        catch (Exception ex)
+        {
+            _response.IsSuccess = false;
+            _response.Messages = new List<string> { ex.ToString() };
+        }
+        return _response;
+    }
 
     [HttpPost("AddUser", Name = "AddUser")]
     [ProducesResponseType(StatusCodes.Status201Created)]
@@ -261,7 +270,7 @@ public class ProjectAPIController : BaseController
             _response.Messages.Add("The Project was created with success");
             _response.Result = projectDTO;
 
-            return CreatedAtRoute("GetProject", new { id = newProject.Id }, _response);
+            return CreatedAtRoute("GetProjectById", new { id = newProject.Id }, _response);
         }
         catch (Exception ex)
         {
@@ -280,6 +289,33 @@ public class ProjectAPIController : BaseController
     // {
     //     try
     //     {
+    //         var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+    //         if (loggedUser == null)
+    //         {
+    //             _response.StatusCode = HttpStatusCode.NotFound;
+    //             _response.IsSuccess = false;
+    //             return NotFound(_response);
+    //         }
+
+
+
+    //         var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
+    //         if (profile == null)
+    //         {
+    //             _response.StatusCode = HttpStatusCode.NotFound;
+    //             _response.IsSuccess = false;
+    //             return NotFound(_response);
+    //         }
+
+
+    //         var isPassword = await _userManager.CheckPasswordAsync(loggedUser, userPasswordRequestDTO.Password);
+    //         if (!isPassword)
+    //         {
+    //             _response.StatusCode = HttpStatusCode.NotFound;
+    //             _response.IsSuccess = false;
+    //             _response.Messages.Add("Wrong Password");
+    //             return NotFound(_response);
+    //         }
 
     //         var project = await _unitOfWork.Projects.GetAsync(u => u.Id == id);
     //         if (project == null)
