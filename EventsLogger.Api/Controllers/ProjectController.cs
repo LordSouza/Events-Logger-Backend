@@ -152,7 +152,7 @@ public class ProjectAPIController : BaseController
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<ActionResult<APIResponse>> GetProject([FromBody] ProjectGetDTO projectGetDTO)
+    public async Task<ActionResult<APIResponse>> GetProject([FromBody] GetByIdDTO projectIdDTO)
     {
         try
         {
@@ -177,7 +177,7 @@ public class ProjectAPIController : BaseController
             }
 
 
-            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == projectGetDTO.Id, includeProperties: "Address");
+            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == projectIdDTO.Id, includeProperties: "Address");
 
             if (project == null)
             {
