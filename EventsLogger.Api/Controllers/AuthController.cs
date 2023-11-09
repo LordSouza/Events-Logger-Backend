@@ -4,10 +4,7 @@ using EventsLogger.DataService.Repositories.Interfaces;
 using EventsLogger.Entities.DbSet;
 using EventsLogger.Entities.Dtos.Requests;
 using EventsLogger.Entities.Dtos.Response;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -23,12 +20,10 @@ namespace EventsLogger.Api.Controllers;
 public class AuthController : BaseController
 {
     private readonly APIResponse _response;
-    private readonly UserManager<User> _userManager;
     private readonly JwtConfig _jwtConfig;
-    public AuthController(IUnitOfWork unitOfWork, IMapper mapper, UserManager<User> userManager, IOptionsMonitor<JwtConfig> optionsMonitor) : base(unitOfWork, mapper)
+    public AuthController(IUnitOfWork unitOfWork, IMapper mapper, UserManager<User> userManager, IOptionsMonitor<JwtConfig> optionsMonitor) : base(unitOfWork, mapper, userManager)
     {
         _jwtConfig = optionsMonitor.CurrentValue;
-        _userManager = userManager;
         _response = new();
     }
 
@@ -62,8 +57,8 @@ public class AuthController : BaseController
             var newUser = new User()
             {
                 Email = requestDTO.Email,
-                Name = requestDTO.Name,
-                UserName = requestDTO.Name,
+                Name = requestDTO.FirstName + " " + requestDTO.LastName,
+                UserName = requestDTO.UserName
 
             };
 
@@ -80,9 +75,12 @@ public class AuthController : BaseController
 
             var token = GenerateJwtToken(newUser);
 
-
+            AuthResult authResult = new()
+            {
+                Token = token
+            };
             _response.StatusCode = HttpStatusCode.Created;
-            _response.Result = token;
+            _response.Result = authResult;
             return Created("GetUser", _response);
         }
         catch (Exception ex)
@@ -135,9 +133,13 @@ public class AuthController : BaseController
 
             var token = GenerateJwtToken(existingUser);
 
-            _response.StatusCode = HttpStatusCode.Created;
-            _response.Result = token;
-            return Created("GetUser", _response);
+            AuthResult authResult = new()
+            {
+                Token = token
+            };
+            _response.StatusCode = HttpStatusCode.OK;
+            _response.Result = authResult;
+            return Ok(_response);
         }
         catch (Exception ex)
         {
@@ -162,12 +164,13 @@ public class AuthController : BaseController
             Subject = new ClaimsIdentity(new[]
             {
                 new Claim("id", user.Id),
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email!),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString())
             }),
             Expires = DateTime.Now.AddHours(4),
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha512)
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
 
         var token = jwtTokenHandler.CreateToken(tokenDescriptor);

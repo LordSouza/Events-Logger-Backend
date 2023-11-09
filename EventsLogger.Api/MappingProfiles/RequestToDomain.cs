@@ -14,9 +14,6 @@ public class RequestToDomain : Profile
             dest => dest.Id,
             opt => opt.MapFrom(src => Guid.NewGuid()))
         .ForMember(
-            des => des.Status,
-            opt => opt.MapFrom(src => 1))
-        .ForMember(
             des => des.CreatedDate,
             opt => opt.MapFrom(src => DateTime.UtcNow))
         .ForMember(
@@ -27,9 +24,6 @@ public class RequestToDomain : Profile
         .ForMember(
             dest => dest.Id,
             opt => opt.MapFrom(src => Guid.NewGuid()))
-        .ForMember(
-            des => des.Status,
-            opt => opt.MapFrom(src => 1))
         .ForMember(
             des => des.CreatedDate,
             opt => opt.MapFrom(src => DateTime.UtcNow))
@@ -42,9 +36,6 @@ public class RequestToDomain : Profile
             dest => dest.Id,
             opt => opt.MapFrom(src => Guid.NewGuid()))
         .ForMember(
-            des => des.Status,
-            opt => opt.MapFrom(src => 1))
-        .ForMember(
             des => des.CreatedDate,
             opt => opt.MapFrom(src => DateTime.UtcNow))
         .ForMember(
@@ -56,9 +47,6 @@ public class RequestToDomain : Profile
             dest => dest.Id,
             opt => opt.MapFrom(src => Guid.NewGuid()))
         .ForMember(
-            des => des.Status,
-            opt => opt.MapFrom(src => 1))
-        .ForMember(
             des => des.CreatedDate,
             opt => opt.MapFrom(src => DateTime.UtcNow))
         .ForMember(
@@ -69,9 +57,6 @@ public class RequestToDomain : Profile
         .ForMember(
             dest => dest.Id,
             opt => opt.MapFrom(src => Guid.NewGuid()))
-        .ForMember(
-            des => des.Status,
-            opt => opt.MapFrom(src => 1))
         .ForMember(
             des => des.CreatedDate,
             opt => opt.MapFrom(src => DateTime.UtcNow))
@@ -87,11 +72,14 @@ public class RequestToDomain : Profile
             dest => dest.Id,
             opt => opt.Ignore())
         .ForMember(
-            des => des.Status,
-            opt => opt.Ignore())
-        .ForMember(
             des => des.CreatedDate,
             opt => opt.Ignore())
+        .ForMember(
+            dest => dest.Name,
+            opt => opt.MapFrom(src => src.FirstName + " " + src.LastName))
+        .ForMember(
+            dest => dest.UserName,
+            opt => opt.MapFrom(src => src.FirstName + "_" + src.LastName))
         .ForMember(
             des => des.UpdatedDate,
             opt => opt.MapFrom(src => DateTime.UtcNow));
@@ -99,9 +87,6 @@ public class RequestToDomain : Profile
         CreateMap<UpdateAddressDTO, Address>()
         .ForMember(
             dest => dest.Id,
-            opt => opt.Ignore())
-        .ForMember(
-            des => des.Status,
             opt => opt.Ignore())
         .ForMember(
             des => des.CreatedDate,
@@ -115,9 +100,6 @@ public class RequestToDomain : Profile
             dest => dest.Id,
             opt => opt.Ignore())
         .ForMember(
-            des => des.Status,
-            opt => opt.Ignore())
-        .ForMember(
             des => des.CreatedDate,
             opt => opt.Ignore())
         .ForMember(
@@ -129,9 +111,6 @@ public class RequestToDomain : Profile
             dest => dest.Id,
             opt => opt.Ignore())
         .ForMember(
-            des => des.Status,
-            opt => opt.Ignore())
-        .ForMember(
             des => des.CreatedDate,
             opt => opt.Ignore())
         .ForMember(
@@ -141,9 +120,6 @@ public class RequestToDomain : Profile
         CreateMap<UpdateUserProjectDTO, UserProject>()
         .ForMember(
             dest => dest.Id,
-            opt => opt.Ignore())
-        .ForMember(
-            des => des.Status,
             opt => opt.Ignore())
         .ForMember(
             des => des.CreatedDate,

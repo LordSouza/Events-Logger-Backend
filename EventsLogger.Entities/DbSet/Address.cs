@@ -9,7 +9,4 @@ public class Address : BaseEntity
     public string State { get; set; } = string.Empty;
     public string ZipCode { get; set; } = string.Empty;
     public string Country { get; set; } = string.Empty;
-    [ForeignKey("Project")]
-    public Guid ProjectId { get; set; }
-    public required Project Project { get; set; }
 }
