@@ -6,4 +6,6 @@ public class EntryDTO
     public DateTime CreatedDate { get; set; }
     public string? Description { get; init; }
     public string[]? Files { get; init; }
+    public UserDTO? UserDTO { get; set; }
+    public ProjectDTO? ProjectDTO { get; set; }
 }

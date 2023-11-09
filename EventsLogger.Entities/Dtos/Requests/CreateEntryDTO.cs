@@ -2,6 +2,12 @@
 
 public class CreateEntryDTO
 {
+    public CreateEntryDTO()
+    {
+        FilesUrl = new List<string>();
+    }
+    public Guid ProjectId { get; set; }
     public string Description { get; init; } = string.Empty;
-    public string[]? Files { get; init; }
+
+    public List<string> FilesUrl { get; set; }
 }
