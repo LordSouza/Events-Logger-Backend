@@ -11,11 +11,14 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 
 
+
+
 // Get Connection String
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 // 
 // Initialising my DbContext inside DI Container
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+
 
 builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("JwtConfig"));
 
@@ -28,6 +31,7 @@ builder.Services.AddAuthentication(options =>
 .AddJwtBearer(jwt =>
 {
     var key = Encoding.ASCII.GetBytes(builder.Configuration.GetSection("JwtConfig:Secret").Value!);
+    jwt.RequireHttpsMetadata = false;
     jwt.SaveToken = true;
     jwt.TokenValidationParameters = new TokenValidationParameters()
     {
@@ -36,7 +40,7 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuer = false, // for dev, change on prod
         ValidateAudience = false, // for dev, change on prod
         RequireExpirationTime = false, // needs to be updated // for dev, change on prod
-        ValidateLifetime = true,
+        ValidateLifetime = false,
 
     };
 });

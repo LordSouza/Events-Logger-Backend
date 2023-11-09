@@ -4,10 +4,7 @@ using EventsLogger.DataService.Repositories.Interfaces;
 using EventsLogger.Entities.DbSet;
 using EventsLogger.Entities.Dtos.Requests;
 using EventsLogger.Entities.Dtos.Response;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -23,64 +20,11 @@ namespace EventsLogger.Api.Controllers;
 public class AuthController : BaseController
 {
     private readonly APIResponse _response;
-    private readonly IConfiguration _configuration;
-    private readonly UserManager<User> _userManager;
     private readonly JwtConfig _jwtConfig;
-    public AuthController(IUnitOfWork unitOfWork, IMapper mapper, UserManager<User> userManager, IConfiguration configuration, IOptionsMonitor<JwtConfig> optionsMonitor) : base(unitOfWork, mapper)
+    public AuthController(IUnitOfWork unitOfWork, IMapper mapper, UserManager<User> userManager, IOptionsMonitor<JwtConfig> optionsMonitor) : base(unitOfWork, mapper, userManager)
     {
         _jwtConfig = optionsMonitor.CurrentValue;
-        _configuration = configuration;
-        _userManager = userManager;
         _response = new();
-    }
-
-    [HttpGet]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<ActionResult<APIResponse>> GetEntries()
-    {
-        try
-        {
-            IEnumerable<User> UserList = await _unitOfWork.Users.GetAllAsync();
-            _response.Result = _mapper.Map<List<UserDTO>>(UserList);
-            _response.StatusCode = HttpStatusCode.OK;
-            return Ok(_response);
-        }
-        catch (Exception ex)
-        {
-            _response.IsSuccess = false;
-            _response.Messages = new List<string> { ex.ToString() };
-        }
-        return _response;
-    }
-
-
-
-    [HttpGet("{id:guid}", Name = "GetUser")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<APIResponse>> GetUser(Guid id)
-    {
-        try
-        {
-            var User = await _unitOfWork.Users.GetAsync(u => u.Id == id.ToString());
-            if (User == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
-            _response.StatusCode = HttpStatusCode.OK;
-            _response.Result = _mapper.Map<UserDTO>(User);
-            return Ok(_response);
-        }
-        catch (Exception ex)
-        {
-            _response.IsSuccess = false;
-            _response.Messages = new List<string> { ex.ToString() };
-        }
-        return _response;
     }
 
 
@@ -113,8 +57,8 @@ public class AuthController : BaseController
             var newUser = new User()
             {
                 Email = requestDTO.Email,
-                Name = requestDTO.Name,
-                UserName = requestDTO.Name,
+                Name = requestDTO.FirstName + " " + requestDTO.LastName,
+                UserName = requestDTO.UserName
 
             };
 
@@ -131,9 +75,12 @@ public class AuthController : BaseController
 
             var token = GenerateJwtToken(newUser);
 
-
+            AuthResult authResult = new()
+            {
+                Token = token
+            };
             _response.StatusCode = HttpStatusCode.Created;
-            _response.Result = token;
+            _response.Result = authResult;
             return Created("GetUser", _response);
         }
         catch (Exception ex)
@@ -186,116 +133,19 @@ public class AuthController : BaseController
 
             var token = GenerateJwtToken(existingUser);
 
-            _response.StatusCode = HttpStatusCode.Created;
-            _response.Result = token;
-            return Created("GetUser", _response);
+            AuthResult authResult = new()
+            {
+                Token = token
+            };
+            _response.StatusCode = HttpStatusCode.OK;
+            _response.Result = authResult;
+            return Ok(_response);
         }
         catch (Exception ex)
         {
             _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages.Add(ex.ToString());
-        }
-        return _response;
-    }
-
-
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [HttpDelete("{id:guid}", Name = "DeleteUser")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<ActionResult<APIResponse>> DeleteUser(Guid id)
-    {
-        try
-        {
-
-            var User = await _unitOfWork.Users.GetAsync(u => u.Id == id.ToString());
-            if (User == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
-            await _unitOfWork.Users.RemoveAsync(User);
-
-            _response.StatusCode = HttpStatusCode.NoContent;
-            _response.IsSuccess = true;
-            return Ok(_response);
-        }
-        catch (Exception ex)
-        {
-            _response.IsSuccess = false;
-            _response.Messages = new List<string> { ex.ToString() };
-        }
-        return _response;
-    }
-
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [HttpPut("{id:guid}", Name = "UpdateUser")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<ActionResult<APIResponse>> UpdateUser(Guid id, [FromBody] UpdateUserDTO updateUserDTO)
-    {
-        try
-        {
-
-            if (updateUserDTO == null || id != updateUserDTO.Id)
-            {
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                return BadRequest(_response);
-            }
-            User user = _mapper.Map<User>(updateUserDTO);
-
-            await _unitOfWork.Users.UpdateAsync(user);
-            _response.StatusCode = HttpStatusCode.NoContent;
-            _response.IsSuccess = true;
-            return Ok(_response);
-        }
-        catch (Exception ex)
-        {
-            _response.IsSuccess = false;
-            _response.Messages = new List<string> { ex.ToString() };
-        }
-        return _response;
-    }
-
-    [HttpPatch("{id:guid}", Name = "UpdatePartialUser")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<APIResponse>> UpdatePartialUser(Guid id, JsonPatchDocument<UpdateUserDTO> patchDTO)
-    {
-        try
-        {
-
-            var User = await _unitOfWork.Users.GetAsync(u => u.Id == id.ToString(), false);
-
-            if (User is null)
-            {
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                return BadRequest(_response);
-            }
-            UpdateUserDTO UserDTO = _mapper.Map<UpdateUserDTO>(User);
-
-            patchDTO.ApplyTo(UserDTO, ModelState);
-
-            User model = _mapper.Map<User>(UserDTO);
-
-            await _unitOfWork.Users.UpdateAsync(model);
-
-            if (!ModelState.IsValid)
-            {
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                return BadRequest(_response);
-            }
-            _response.StatusCode = HttpStatusCode.NoContent;
-            _response.IsSuccess = true;
-            return Ok(_response);
-        }
-        catch (Exception ex)
-        {
-            _response.IsSuccess = false;
-            _response.Messages = new List<string> { ex.ToString() };
         }
         return _response;
     }
@@ -314,12 +164,13 @@ public class AuthController : BaseController
             Subject = new ClaimsIdentity(new[]
             {
                 new Claim("id", user.Id),
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email!),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString())
             }),
             Expires = DateTime.Now.AddHours(4),
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha512)
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
 
         var token = jwtTokenHandler.CreateToken(tokenDescriptor);
