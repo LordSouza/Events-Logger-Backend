@@ -1,4 +1,5 @@
 using AutoMapper;
+using EventsLogger.BlobService.Repositories.Interfaces;
 using EventsLogger.DataService.Repositories.Interfaces;
 using EventsLogger.Entities.DbSet;
 using EventsLogger.Entities.Dtos.Requests;
@@ -19,7 +20,18 @@ public class ProjectAPIController : BaseController
 {
     private readonly APIResponse _response;
 
-    public ProjectAPIController(IUnitOfWork unitOfWork, IMapper mapper, UserManager<User> userManager) : base(unitOfWork, mapper, userManager)
+    public ProjectAPIController(IUnitOfWork unitOfWork,
+                              IMapper mapper,
+                              UserManager<User> userManager,
+                              IBlobManagement blobManagement,
+                              IQueuesManagement queuesManagement,
+                              IConfiguration configuration) : base(
+                                  unitOfWork,
+                                  mapper,
+                                  userManager,
+                                  blobManagement,
+                                  queuesManagement,
+                                  configuration)
     {
         _response = new();
     }

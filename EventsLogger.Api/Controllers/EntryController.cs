@@ -1,4 +1,5 @@
 using AutoMapper;
+using EventsLogger.BlobService.Repositories.Interfaces;
 using EventsLogger.DataService.Repositories.Interfaces;
 using EventsLogger.Entities.DbSet;
 using EventsLogger.Entities.Dtos.Requests;
@@ -20,7 +21,18 @@ public class EntryAPIController : BaseController
 {
     private readonly APIResponse _response;
 
-    public EntryAPIController(IUnitOfWork unitOfWork, IMapper mapper, UserManager<User> userManager) : base(unitOfWork, mapper, userManager)
+    public EntryAPIController(IUnitOfWork unitOfWork,
+                              IMapper mapper,
+                              UserManager<User> userManager,
+                              IBlobManagement blobManagement,
+                              IQueuesManagement queuesManagement,
+                              IConfiguration configuration) : base(
+                                  unitOfWork,
+                                  mapper,
+                                  userManager,
+                                  blobManagement,
+                                  queuesManagement,
+                                  configuration)
     {
         _response = new();
     }
@@ -83,10 +95,23 @@ public class EntryAPIController : BaseController
     {
         try
         {
-            if (createEntryDTO == null)
+            if (!ModelState.IsValid)
             {
                 _response.StatusCode = HttpStatusCode.BadRequest;
                 return BadRequest(_response);
+            }
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+
+            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
+            if (profile == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
             }
             Entry entry = _mapper.Map<Entry>(createEntryDTO);
 
@@ -115,14 +140,38 @@ public class EntryAPIController : BaseController
     {
         try
         {
+            if (!ModelState.IsValid)
+            {
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
+            }
 
-            var Entry = await _unitOfWork.Entries.GetAsync(u => u.Id == id);
-            if (Entry == null)
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
             {
                 _response.StatusCode = HttpStatusCode.NotFound;
                 return NotFound(_response);
             }
-            await _unitOfWork.Entries.RemoveAsync(Entry);
+
+            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
+            if (profile == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+
+            var entryToDelete = await _unitOfWork.Entries.GetAsync(u => u.Id == id);
+            if (entryToDelete.UserId == profile.Id)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+            if (entryToDelete == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+            await _unitOfWork.Entries.RemoveAsync(entryToDelete);
 
             _response.StatusCode = HttpStatusCode.NoContent;
             _response.IsSuccess = true;
@@ -144,6 +193,20 @@ public class EntryAPIController : BaseController
     {
         try
         {
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+
+            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
+            if (profile == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+
 
             if (updateDTO == null || id != updateDTO.Id)
             {
@@ -173,6 +236,19 @@ public class EntryAPIController : BaseController
     {
         try
         {
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+
+            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
+            if (profile == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
 
             var entry = await _unitOfWork.Entries.GetAsync(u => u.Id == id, false);
 

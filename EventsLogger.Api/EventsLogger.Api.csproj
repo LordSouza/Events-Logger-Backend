@@ -32,6 +32,7 @@
   <ItemGroup>
     <ProjectReference Include="..\EventsLogger.Entities\EventsLogger.Entities.csproj" />
     <ProjectReference Include="..\EventsLogger.DataService\EventsLogger.DataService.csproj" />
+    <ProjectReference Include="..\EventsLogger.BlobService\EventsLogger.BlobService.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,5 +1,6 @@
 using AutoMapper;
 using EventsLogger.Api.Configuration;
+using EventsLogger.BlobService.Repositories.Interfaces;
 using EventsLogger.DataService.Repositories.Interfaces;
 using EventsLogger.Entities.DbSet;
 using EventsLogger.Entities.Dtos.Requests;
@@ -21,7 +22,20 @@ public class AuthController : BaseController
 {
     private readonly APIResponse _response;
     private readonly JwtConfig _jwtConfig;
-    public AuthController(IUnitOfWork unitOfWork, IMapper mapper, UserManager<User> userManager, IOptionsMonitor<JwtConfig> optionsMonitor) : base(unitOfWork, mapper, userManager)
+    public AuthController(
+        IOptionsMonitor<JwtConfig> optionsMonitor,
+        IUnitOfWork unitOfWork,
+        IMapper mapper,
+        UserManager<User> userManager,
+        IBlobManagement blobManagement,
+        IQueuesManagement queuesManagement,
+        IConfiguration configuration) : base(
+            unitOfWork,
+            mapper,
+            userManager,
+            blobManagement,
+            queuesManagement,
+            configuration)
     {
         _jwtConfig = optionsMonitor.CurrentValue;
         _response = new();
