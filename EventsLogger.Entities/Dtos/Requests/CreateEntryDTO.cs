@@ -1,4 +1,6 @@
-﻿namespace EventsLogger.Entities.Dtos.Requests;
+﻿using Microsoft.AspNetCore.Http;
+
+namespace EventsLogger.Entities.Dtos.Requests;
 
 public class CreateEntryDTO
 {
@@ -9,5 +11,6 @@ public class CreateEntryDTO
     public Guid ProjectId { get; set; }
     public string Description { get; init; } = string.Empty;
 
-    public List<string> FilesUrl { get; set; }
+    public List<IFormFile>? Files { get; init; }
+
 }
