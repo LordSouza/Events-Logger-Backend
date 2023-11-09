@@ -13,7 +13,13 @@ public class DomainToResponse : Profile
         CreateMap<Address, AddressDTO>();
         CreateMap<Project, ProjectDTO>();
         CreateMap<Project, ProjectNameDTO>();
-        CreateMap<Entry, EntryDTO>();
+        CreateMap<Entry, EntryDTO>()
+        .ForMember(
+            dest => dest.UserDTO,
+            opt => opt.MapFrom(src => src.User))
+        .ForMember(
+        dest => dest.ProjectDTO,
+        opt => opt.MapFrom(src => src.Project));
         CreateMap<UserProject, UserProjectDTO>();
     }
 }
