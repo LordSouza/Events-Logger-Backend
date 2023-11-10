@@ -33,11 +33,13 @@ public class UserController : BaseController
         _response = new();
     }
 
+
+
     [HttpGet("All", Name = "GetAll")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<ActionResult<APIResponse>> GetUsers([FromQuery(Name = "UserName")] string? username, [FromQuery(Name = "Project")] string? project)
+    public async Task<ActionResult<APIResponse>> GetUsers([FromQuery(Name = "UserName")] string? username)
     {
         try
         {
@@ -57,7 +59,14 @@ public class UserController : BaseController
             }
             IEnumerable<User> UserList;
             // IEnumerable<UserProject> UserProjectList;
-            UserList = await _unitOfWork.Users.GetAllAsync();
+            if (username != null)
+            {
+                UserList = await _unitOfWork.Users.GetAllAsync(u => u.UserName!.Contains(username));
+            }
+            else
+            {
+                UserList = await _unitOfWork.Users.GetAllAsync();
+            }
             // UserList = await _unitOfWork.Users.GetAllAsync(u => u.UserName == username);
             _response.Result = _mapper.Map<List<UserDTO>>(UserList);
             _response.StatusCode = HttpStatusCode.OK;
@@ -84,69 +93,6 @@ public class UserController : BaseController
     }
 
 
-    /// <summary>
-    /// Get self data if no query is made
-    /// 
-    /// if name = all 
-    /// {     
-    ///     query all users
-    ///}
-    /// 
-    /// if name = {username} 
-    /// {
-    ///     query user with username      
-    /// }
-    /// </summary>
-    /// <param name="username"></param>
-    /// <returns></returns>
-    [HttpGet(Name = "GetUserByUsername")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<ActionResult<APIResponse>> GetUser([FromQuery(Name = "UserName")] string? username)
-    {
-        try
-        {
-
-            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
-            if (loggedUser == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
-
-            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
-            if (profile == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
-            // IEnumerable<UserProject> UserProjectList;
-            if (username == null)
-            {
-                User self = await _unitOfWork.Users.GetAsync(u => u.UserName == profile.UserName);
-
-                _response.Result = _mapper.Map<UserDTO>(self);
-                _response.StatusCode = HttpStatusCode.OK;
-                UserDTO selfDTO = _mapper.Map<UserDTO>(profile);
-                return Ok(_response);
-
-            }
-
-            User userByUsername = await _unitOfWork.Users.GetAsync(u => u.UserName == username);
-
-            _response.Result = _mapper.Map<UserDTO>(userByUsername);
-            _response.StatusCode = HttpStatusCode.OK;
-            UserDTO profileDTO = _mapper.Map<UserDTO>(profile);
-            return Ok(_response);
-        }
-        catch (Exception ex)
-        {
-            _response.IsSuccess = false;
-            _response.Messages = new List<string> { ex.ToString() };
-        }
-        return _response;
-    }
 
 
     /// <summary>
@@ -248,8 +194,6 @@ public class UserController : BaseController
     //     return _response;
     // }
 
-    // TODO change password post request
-
 
 
     /// <summary>
@@ -257,65 +201,65 @@ public class UserController : BaseController
     /// </summary>
     /// <param name="patchDTO"></param>
     /// <returns></returns>
-    [HttpPatch("{Username}", Name = "UpdatePhoto")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<APIResponse>> UpdatePartialUser(string username, [FromForm] JsonPatchDocument<UpdateUserPhotoDTO> patchDTO)
-    {
-        try
-        {
-            if (!ModelState.IsValid)
-            {
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                return BadRequest(_response);
-            }
+    // [HttpPatch("{Username}", Name = "UpdatePhoto")]
+    // [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    // [ProducesResponseType(StatusCodes.Status204NoContent)]
+    // [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    // public async Task<ActionResult<APIResponse>> UpdatePartialUser(string username, [FromForm] JsonPatchDocument<UpdateUserPhotoDTO> patchDTO)
+    // {
+    //     try
+    //     {
+    //         if (!ModelState.IsValid)
+    //         {
+    //             _response.StatusCode = HttpStatusCode.BadRequest;
+    //             return BadRequest(_response);
+    //         }
 
-            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
-            if (loggedUser == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
+    //         var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+    //         if (loggedUser == null)
+    //         {
+    //             _response.StatusCode = HttpStatusCode.NotFound;
+    //             return NotFound(_response);
+    //         }
 
-            User userToChange = await _unitOfWork.Users.GetAsync(u => u.UserName == username);
-            if (userToChange.Id != loggedUser.Id)
-            {
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                return BadRequest(_response);
-            }
-            if (patchDTO.Operations[0].path != "/photopath")
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
+    //         User userToChange = await _unitOfWork.Users.GetAsync(u => u.UserName == username);
+    //         if (userToChange.Id != loggedUser.Id)
+    //         {
+    //             _response.StatusCode = HttpStatusCode.BadRequest;
+    //             return BadRequest(_response);
+    //         }
+    //         if (patchDTO.Operations[0].path != "/photopath")
+    //         {
+    //             _response.StatusCode = HttpStatusCode.NotFound;
+    //             return NotFound(_response);
+    //         }
 
-            // Url = UploadFile(patchDTO)
-            // refactor this part
-            UpdateUserDTO UserDTO = _mapper.Map<UpdateUserDTO>(loggedUser);
+    //         // Url = UploadFile(patchDTO)
+    //         // refactor this part
+    //         UpdateUserDTO UserDTO = _mapper.Map<UpdateUserDTO>(loggedUser);
 
-            // patchDTO.ApplyTo(UserDTO, ModelState);
+    //         // patchDTO.ApplyTo(UserDTO, ModelState);
 
-            User model = _mapper.Map<User>(UserDTO);
+    //         User model = _mapper.Map<User>(UserDTO);
 
-            await _unitOfWork.Users.UpdateAsync(model);
+    //         await _unitOfWork.Users.UpdateAsync(model);
 
-            if (!ModelState.IsValid)
-            {
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                return BadRequest(_response);
-            }
-            _response.StatusCode = HttpStatusCode.NoContent;
-            _response.IsSuccess = true;
-            return Ok(_response);
-        }
-        catch (Exception ex)
-        {
-            _response.IsSuccess = false;
-            _response.Messages = new List<string> { ex.ToString() };
-        }
-        return _response;
-    }
+    //         if (!ModelState.IsValid)
+    //         {
+    //             _response.StatusCode = HttpStatusCode.BadRequest;
+    //             return BadRequest(_response);
+    //         }
+    //         _response.StatusCode = HttpStatusCode.NoContent;
+    //         _response.IsSuccess = true;
+    //         return Ok(_response);
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         _response.IsSuccess = false;
+    //         _response.Messages = new List<string> { ex.ToString() };
+    //     }
+    //     return _response;
+    // }
 
 
 }
