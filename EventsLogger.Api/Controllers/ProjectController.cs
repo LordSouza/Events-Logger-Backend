@@ -1,4 +1,5 @@
 using AutoMapper;
+using EventsLogger.BlobService.Repositories.Interfaces;
 using EventsLogger.DataService.Repositories.Interfaces;
 using EventsLogger.Entities.DbSet;
 using EventsLogger.Entities.Dtos.Requests;
@@ -19,7 +20,16 @@ public class ProjectAPIController : BaseController
 {
     private readonly APIResponse _response;
 
-    public ProjectAPIController(IUnitOfWork unitOfWork, IMapper mapper, UserManager<User> userManager) : base(unitOfWork, mapper, userManager)
+    public ProjectAPIController(IUnitOfWork unitOfWork,
+                              IMapper mapper,
+                              UserManager<User> userManager,
+                              IBlobManagement blobManagement,
+                              IConfiguration configuration) : base(
+                                  unitOfWork,
+                                  mapper,
+                                  userManager,
+                                  blobManagement,
+                                  configuration)
     {
         _response = new();
     }
@@ -140,7 +150,7 @@ public class ProjectAPIController : BaseController
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<ActionResult<APIResponse>> GetProject([FromBody] ProjectGetDTO projectGetDTO)
+    public async Task<ActionResult<APIResponse>> GetProject([FromBody] GetByIdDTO projectIdDTO)
     {
         try
         {
@@ -165,7 +175,7 @@ public class ProjectAPIController : BaseController
             }
 
 
-            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == projectGetDTO.Id, includeProperties: "Address");
+            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == projectIdDTO.Id, includeProperties: "Address");
 
             if (project == null)
             {

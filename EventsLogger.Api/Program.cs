@@ -1,5 +1,7 @@
 using System.Text;
 using EventsLogger.Api.Configuration;
+using EventsLogger.BlobService.Repositories;
+using EventsLogger.BlobService.Repositories.Interfaces;
 using EventsLogger.DataService.Data;
 using EventsLogger.DataService.Repositories.Interfaces;
 using EventsLogger.Entities.DbSet;
@@ -84,6 +86,7 @@ builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 
+builder.Services.AddScoped<IBlobManagement, BlobManagement>();
 
 var app = builder.Build();
 
