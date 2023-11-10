@@ -1,4 +1,5 @@
 using AutoMapper;
+using EventsLogger.BlobService.Repositories.Interfaces;
 using EventsLogger.DataService.Repositories.Interfaces;
 using EventsLogger.Entities.DbSet;
 using EventsLogger.Entities.Dtos.Requests;
@@ -18,7 +19,16 @@ public class EntryController : BaseController
 {
     private readonly APIResponse _response;
 
-    public EntryController(IUnitOfWork unitOfWork, IMapper mapper, UserManager<User> userManager) : base(unitOfWork, mapper, userManager)
+    public EntryController(IUnitOfWork unitOfWork,
+                              IMapper mapper,
+                              UserManager<User> userManager,
+                              IBlobManagement blobManagement,
+                              IConfiguration configuration) : base(
+                                  unitOfWork,
+                                  mapper,
+                                  userManager,
+                                  blobManagement,
+                                  configuration)
     {
         _response = new();
     }
@@ -140,7 +150,7 @@ public class EntryController : BaseController
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<ActionResult<APIResponse>> CreateEntry([FromBody] CreateEntryDTO createEntryDTO)
+    public async Task<ActionResult<APIResponse>> CreateEntry([FromForm] CreateEntryDTO createEntryDTO)
     {
         try
         {
@@ -172,6 +182,13 @@ public class EntryController : BaseController
                 return NotFound(_response);
             }
 
+            List<string> filesUrl = new();
+
+            foreach (var file in createEntryDTO.Files)
+            {
+                var url = await UploadFile(file);
+                filesUrl.Add(url);
+            }
             Entry newEntry = new()
             {
                 UserId = profile.Id,
@@ -179,7 +196,7 @@ public class EntryController : BaseController
                 ProjectId = createEntryDTO.ProjectId,
                 Project = projectModel,
                 Description = createEntryDTO.Description,
-                FilesUrl = createEntryDTO.FilesUrl,
+                FilesUrl = filesUrl,
             };
 
             await _unitOfWork.Entries.CreateAsync(newEntry);
@@ -228,20 +245,20 @@ public class EntryController : BaseController
             }
 
 
-
-
             var entryToDelete = await _unitOfWork.Entries.GetAsync(u => u.Id == entryIdDTO.Id);
+
+            if (entryToDelete == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
 
             if (entryToDelete.UserId != profile.Id)
             {
                 _response.StatusCode = HttpStatusCode.BadRequest;
                 return BadRequest(_response);
             }
-            if (entryToDelete == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
+
 
             await _unitOfWork.Entries.RemoveAsync(entryToDelete);
 

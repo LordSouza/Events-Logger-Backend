@@ -24,13 +24,11 @@ public class ProjectAPIController : BaseController
                               IMapper mapper,
                               UserManager<User> userManager,
                               IBlobManagement blobManagement,
-                              IQueuesManagement queuesManagement,
                               IConfiguration configuration) : base(
                                   unitOfWork,
                                   mapper,
                                   userManager,
                                   blobManagement,
-                                  queuesManagement,
                                   configuration)
     {
         _response = new();
