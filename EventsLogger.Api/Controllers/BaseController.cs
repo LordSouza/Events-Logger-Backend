@@ -1,4 +1,4 @@
-using System.Data.Common;
+using System.Net;
 using AutoMapper;
 using EventsLogger.BlobService.Repositories.Interfaces;
 using EventsLogger.DataService.Repositories.Interfaces;
@@ -6,12 +6,10 @@ using EventsLogger.Entities.DbSet;
 using EventsLogger.Entities.Dtos.Response;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Routing.Constraints;
 
 namespace EventsLogger.Api.Controllers;
 
-[Route("api/[controller]")]
-[ApiController]
+
 public class BaseController : ControllerBase
 {
 
