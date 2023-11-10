@@ -86,7 +86,6 @@ builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 
-builder.Services.AddScoped<IQueuesManagement, QueuesManagement>();
 builder.Services.AddScoped<IBlobManagement, BlobManagement>();
 
 var app = builder.Build();

@@ -28,13 +28,11 @@ public class AuthController : BaseController
         IMapper mapper,
         UserManager<User> userManager,
         IBlobManagement blobManagement,
-        IQueuesManagement queuesManagement,
         IConfiguration configuration) : base(
             unitOfWork,
             mapper,
             userManager,
             blobManagement,
-            queuesManagement,
             configuration)
     {
         _jwtConfig = optionsMonitor.CurrentValue;

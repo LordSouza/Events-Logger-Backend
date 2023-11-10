@@ -23,13 +23,11 @@ public class UserController : BaseController
                               IMapper mapper,
                               UserManager<User> userManager,
                               IBlobManagement blobManagement,
-                              IQueuesManagement queuesManagement,
                               IConfiguration configuration) : base(
                                   unitOfWork,
                                   mapper,
                                   userManager,
                                   blobManagement,
-                                  queuesManagement,
                                   configuration)
     {
         _response = new();
@@ -166,18 +164,14 @@ public class UserController : BaseController
         try
         {
 
-            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
-            if (loggedUser == null)
+            if (!ModelState.IsValid)
             {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                _response.IsSuccess = false;
-                return NotFound(_response);
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
             }
 
-
-
-            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
-            if (profile == null)
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
             {
                 _response.StatusCode = HttpStatusCode.NotFound;
                 _response.IsSuccess = false;
@@ -195,7 +189,7 @@ public class UserController : BaseController
             }
 
 
-            await _unitOfWork.Users.RemoveAsync(profile);
+            await _unitOfWork.Users.RemoveAsync(loggedUser);
 
             _response.StatusCode = HttpStatusCode.NoContent;
             _response.IsSuccess = true;
@@ -210,73 +204,16 @@ public class UserController : BaseController
     }
 
 
-    /// <summary>
-    /// Update self
-    /// </summary>
-    /// <param name="updateUserDTO"></param>
-    /// <returns></returns>
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [HttpPut(Name = "UpdateUser")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<ActionResult<APIResponse>> UpdateUser([FromBody] UpdateUserDTO updateUserDTO)
-    {
-        try
-        {
-            if (!ModelState.IsValid)
-            {
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                return BadRequest(_response);
-            }
-
-            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
-            if (loggedUser == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
-
-            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
-            if (profile == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
-
-
-
-            profile.Name = updateUserDTO.FirstName + " " + updateUserDTO.LastName;
-            profile.Email = updateUserDTO.Email;
-            profile.PhotoPath = updateUserDTO.PhotoPath;
-
-            await _userManager.UpdateAsync(profile);
-
-            _response.StatusCode = HttpStatusCode.NoContent;
-            _response.IsSuccess = true;
-            return Ok(_response);
-        }
-        catch (Exception ex)
-        {
-            _response.IsSuccess = false;
-            _response.Messages = new List<string> { ex.ToString() };
-        }
-        return _response;
-    }
-
-    // TODO change password post request
-
-
-
-    /// <summary>
-    /// This request wasn't tested after the changes
-    /// </summary>
-    /// <param name="patchDTO"></param>
-    /// <returns></returns>
-    // [HttpPatch(Name = "UpdatePartialUser")]
-    // [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    // /// <summary>
+    // /// Update self
+    // /// </summary>
+    // /// <param name="updateUserDTO"></param>
+    // /// <returns></returns>
     // [ProducesResponseType(StatusCodes.Status204NoContent)]
     // [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    // public async Task<ActionResult<APIResponse>> UpdatePartialUser(JsonPatchDocument<UpdateUserDTO> patchDTO)
+    // [HttpPut(Name = "UpdateUser")]
+    // [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    // public async Task<ActionResult<APIResponse>> UpdateUser([FromBody] UpdateUserDTO updateUserDTO)
     // {
     //     try
     //     {
@@ -293,27 +230,12 @@ public class UserController : BaseController
     //             return NotFound(_response);
     //         }
 
-    //         var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
-    //         if (profile == null)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.NotFound;
-    //             return NotFound(_response);
-    //         }
+    //         loggedUser.Name = updateUserDTO.FirstName + " " + updateUserDTO.LastName;
+    //         loggedUser.Email = updateUserDTO.Email;
+    //         loggedUser.PhotoPath = updateUserDTO.PhotoPath;
 
-    //         // refactor this part
-    //         UpdateUserDTO UserDTO = _mapper.Map<UpdateUserDTO>(User);
+    //         await _userManager.UpdateAsync(loggedUser);
 
-    //         patchDTO.ApplyTo(UserDTO, ModelState);
-
-    //         User model = _mapper.Map<User>(UserDTO);
-
-    //         await _unitOfWork.Users.UpdateAsync(model);
-
-    //         if (!ModelState.IsValid)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.BadRequest;
-    //             return BadRequest(_response);
-    //         }
     //         _response.StatusCode = HttpStatusCode.NoContent;
     //         _response.IsSuccess = true;
     //         return Ok(_response);
@@ -325,6 +247,75 @@ public class UserController : BaseController
     //     }
     //     return _response;
     // }
+
+    // TODO change password post request
+
+
+
+    /// <summary>
+    /// This request wasn't tested after the changes
+    /// </summary>
+    /// <param name="patchDTO"></param>
+    /// <returns></returns>
+    [HttpPatch("{Username}", Name = "UpdatePhoto")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<APIResponse>> UpdatePartialUser(string username, [FromForm] JsonPatchDocument<UpdateUserPhotoDTO> patchDTO)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
+            }
+
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+
+            User userToChange = await _unitOfWork.Users.GetAsync(u => u.UserName == username);
+            if (userToChange.Id != loggedUser.Id)
+            {
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
+            }
+            if (patchDTO.Operations[0].path != "/photopath")
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+
+            // Url = UploadFile(patchDTO)
+            // refactor this part
+            UpdateUserDTO UserDTO = _mapper.Map<UpdateUserDTO>(loggedUser);
+
+            // patchDTO.ApplyTo(UserDTO, ModelState);
+
+            User model = _mapper.Map<User>(UserDTO);
+
+            await _unitOfWork.Users.UpdateAsync(model);
+
+            if (!ModelState.IsValid)
+            {
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
+            }
+            _response.StatusCode = HttpStatusCode.NoContent;
+            _response.IsSuccess = true;
+            return Ok(_response);
+        }
+        catch (Exception ex)
+        {
+            _response.IsSuccess = false;
+            _response.Messages = new List<string> { ex.ToString() };
+        }
+        return _response;
+    }
 
 
 }

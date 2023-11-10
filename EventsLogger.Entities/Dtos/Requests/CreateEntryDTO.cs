@@ -6,11 +6,11 @@ public class CreateEntryDTO
 {
     public CreateEntryDTO()
     {
-        FilesUrl = new List<string>();
+        Files = new List<IFormFile>();
     }
     public Guid ProjectId { get; set; }
     public string Description { get; init; } = string.Empty;
 
-    public List<IFormFile>? Files { get; init; }
+    public List<IFormFile> Files { get; init; }
 
 }
