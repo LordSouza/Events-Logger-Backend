@@ -37,7 +37,11 @@ public class EntryController : BaseController
     [HttpGet("all")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<ActionResult<APIResponse>> GetEntries([FromQuery] Guid? projectid, [FromQuery] string? userid)
+    public async Task<ActionResult<APIResponse>> GetEntries(
+        [FromQuery] Guid? projectid,
+        [FromQuery] string? userid,
+        [FromQuery(Name = "DateStart")] string? datestart,
+        [FromQuery(Name = "DateEnd")] string? dateend)
     {
         try
         {
@@ -99,12 +103,12 @@ public class EntryController : BaseController
     }
 
 
-    [HttpGet(Name = "GetEntry")]
+    [HttpGet("{id:guid}", Name = "GetEntry")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<ActionResult<APIResponse>> GetEntry(GetByIdDTO entryIdDTO)
+    public async Task<ActionResult<APIResponse>> GetEntry(Guid id)
     {
         try
         {
@@ -121,13 +125,7 @@ public class EntryController : BaseController
                 return NotFound(_response);
             }
 
-            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
-            if (profile == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
-            var Entry = await _unitOfWork.Entries.GetAsync(u => u.Id == entryIdDTO.Id, includeProperties: "User,Project");
+            var Entry = await _unitOfWork.Entries.GetAsync(u => u.Id == id, includeProperties: "User,Project");
             if (Entry == null)
             {
                 _response.StatusCode = HttpStatusCode.NotFound;
@@ -218,9 +216,9 @@ public class EntryController : BaseController
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [HttpDelete(Name = "DeleteEntry")]
+    [HttpDelete("{id:guid}", Name = "DeleteEntry")]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<ActionResult<APIResponse>> DeleteEntry([FromBody] GetByIdDTO entryIdDTO)
+    public async Task<ActionResult<APIResponse>> DeleteEntry(Guid id)
     {
         try
         {
@@ -237,15 +235,8 @@ public class EntryController : BaseController
                 return NotFound(_response);
             }
 
-            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
-            if (profile == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
 
-
-            var entryToDelete = await _unitOfWork.Entries.GetAsync(u => u.Id == entryIdDTO.Id);
+            var entryToDelete = await _unitOfWork.Entries.GetAsync(u => u.Id == id);
 
             if (entryToDelete == null)
             {
@@ -253,7 +244,7 @@ public class EntryController : BaseController
                 return NotFound(_response);
             }
 
-            if (entryToDelete.UserId != profile.Id)
+            if (entryToDelete.UserId != loggedUser.Id)
             {
                 _response.StatusCode = HttpStatusCode.BadRequest;
                 return BadRequest(_response);

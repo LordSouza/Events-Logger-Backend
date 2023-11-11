@@ -10,7 +10,7 @@
 			"name": "Entry",
 			"item": [
 				{
-					"name": "Get data",
+					"name": "Get All Entries",
 					"event": [
 						{
 							"listen": "prerequest",
@@ -27,13 +27,63 @@
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
-									"});"
+									"});var template = `",
+									"<style type=\"text/css\">",
+									"    .tftable {font-size:14px;color:#333333;width:100%;border-width: 1px;border-color: #87ceeb;border-collapse: collapse;}",
+									"    .tftable th {font-size:18px;background-color:#87ceeb;border-width: 1px;padding: 8px;border-style: solid;border-color: #87ceeb;text-align:left;}",
+									"    .tftable tr {background-color:#ffffff;}",
+									"    .tftable td {font-size:14px;border-width: 1px;padding: 8px;border-style: solid;border-color: #87ceeb;}",
+									"    .tftable tr:hover {background-color:#e0ffff;}",
+									"</style>",
+									"",
+									"<table class=\"tftable\" border=\"1\">",
+									"    <tr>",
+									"        <th>ID</th>",
+									"        <th>Created Date</th>",
+									"        <th>Description</th>",
+									"        <th>User ID</th>",
+									"        <th>User Name</th>",
+									"        <th>User Email</th>",
+									"        <th>Project ID</th>",
+									"        <th>Project Name</th>",
+									"    </tr>",
+									"    ",
+									"    {{#each response.result}}",
+									"        <tr>",
+									"            <td>{{id}}</td>",
+									"            <td>{{createdDate}}</td>",
+									"            <td>{{description}}</td>",
+									"            <td>{{userDTO.id}}</td>",
+									"            <td>{{userDTO.userName}}</td>",
+									"            <td>{{userDTO.email}}</td>",
+									"            <td>{{projectDTO.id}}</td>",
+									"            <td>{{projectDTO.name}}</td>",
+									"        </tr>",
+									"    {{/each}}",
+									"</table>",
+									"`;",
+									"",
+									"function constructVisualizerPayload() {",
+									"    return { response: pm.response.json() }",
+									"}",
+									"",
+									"pm.visualizer.set(template, constructVisualizerPayload());"
 								],
 								"type": "text/javascript"
 							}
 						}
 					],
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
 						"method": "GET",
 						"header": [
 							{
@@ -43,13 +93,26 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/Entry",
+							"raw": "{{base_url}}/api/Entry/all",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
-								"Entry"
+								"Entry",
+								"all"
+							],
+							"query": [
+								{
+									"key": "projectid",
+									"value": "fcd4ce51-ec33-4021-b6ed-bccafd50ed2e",
+									"disabled": true
+								},
+								{
+									"key": "userid",
+									"value": "6bff690f-830b-45fa-b85d-0e8385cb0f1e",
+									"disabled": true
+								}
 							]
 						},
 						"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
@@ -57,7 +120,7 @@
 					"response": []
 				},
 				{
-					"name": "Get data unique",
+					"name": "Get Entry By Id",
 					"event": [
 						{
 							"listen": "test",
@@ -71,18 +134,40 @@
 							}
 						}
 					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
 						"method": "GET",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
-							"raw": "{{base_url}}/api/Entry/ce63fadd-72b2-44a6-bfb2-3120d9607dde",
+							"raw": "{{base_url}}/api/Entry/b16a616b-aba0-4df1-b9ac-bbe8b25ba5ab",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"Entry",
-								"ce63fadd-72b2-44a6-bfb2-3120d9607dde"
+								"b16a616b-aba0-4df1-b9ac-bbe8b25ba5ab"
 							]
 						},
 						"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
@@ -106,16 +191,40 @@
 						}
 					],
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
 						"method": "POST",
 						"header": [],
 						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"Description\": \"lorem ipsum\",\n    \"Files\": [\n        \"\"\n    ]\n}",
-							"options": {
-								"raw": {
-									"language": "json"
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "projectid",
+									"value": "fcd4ce51-ec33-4021-b6ed-bccafd50ed2e",
+									"type": "text"
+								},
+								{
+									"key": "Description",
+									"value": "lorem ipsum",
+									"type": "text"
+								},
+								{
+									"key": "Files",
+									"type": "file",
+									"src": [
+										"/C:/Users/lucas/Downloads/2_NORMA GRADUACAO_aprovadaCEPEAd_novembro-1.pdf",
+										"/C:/Users/lucas/Downloads/grafo.png"
+									]
 								}
-							}
+							]
 						},
 						"url": {
 							"raw": "{{base_url}}/api/Entry/",
@@ -129,49 +238,6 @@
 							]
 						},
 						"description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
-					},
-					"response": []
-				},
-				{
-					"name": "Update data",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Successful PUT request\", function () {",
-									"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
-									"});",
-									""
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "PUT",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"id\": \"d84534ca-0039-4add-9a21-582f09a193b4\",\n    \"Description\": \"lorem ipsum lorem ipsum lorem ipsum\",\n    \"Files\": \"\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/api/Entry/d84534ca-0039-4add-9a21-582f09a193b4",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"Entry",
-								"d84534ca-0039-4add-9a21-582f09a193b4"
-							]
-						},
-						"description": "This is a PUT request and it is used to overwrite an existing piece of data. For instance, after you create an entity with a POST request, you may want to modify that later. You can do that using a PUT request. You typically identify the entity being updated by including an identifier in the URL (eg. `id=1`).\n\nA successful PUT request typically returns a `200 OK`, `201 Created`, or `204 No Content` response code."
 					},
 					"response": []
 				},
@@ -217,34 +283,36 @@
 						"description": "This is a DELETE request, and it is used to delete data that was previously created via a POST request. You typically identify the entity being updated by including an identifier in the URL (eg. `id=1`).\n\nA successful DELETE request typically returns a `200 OK`, `202 Accepted`, or `204 No Content` response code."
 					},
 					"response": []
+				}
+			],
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{token}}",
+						"type": "string"
+					}
+				]
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
 				},
 				{
-					"name": "Patch Data",
-					"request": {
-						"method": "PATCH",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "[{\r\n    \"path\":\"/description\",\r\n    \"op\":\"replace\",\r\n    \"value\":\"big lorem\"\r\n}]",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/api/Entry/ce63fadd-72b2-44a6-bfb2-3120d9607dde",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"Entry",
-								"ce63fadd-72b2-44a6-bfb2-3120d9607dde"
-							]
-						}
-					},
-					"response": []
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
 				}
 			]
 		},
@@ -306,71 +374,6 @@
 					"response": []
 				},
 				{
-					"name": "Get User By Username",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"protocolProfileBehavior": {
-						"disableBodyPruning": true,
-						"disabledSystemHeaders": {}
-					},
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/api/User?username=My_username",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"User"
-							],
-							"query": [
-								{
-									"key": "username",
-									"value": "My_username"
-								}
-							]
-						},
-						"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
-					},
-					"response": []
-				},
-				{
 					"name": "Update data",
 					"event": [
 						{
@@ -391,7 +394,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "    {\n        \"id\": \"380b9cf4-4f41-4efe-a2b9-2fbabdcf2454\",\n        \"name\": \"pes123soa\",\n        \"email\": \"pessoa@admin.com\",\n        \"password\": \"senha\",\n        \"photoPath\": \"google.com/imagens\",\n        \"projectIds\": [],\n    }",
+							"raw": "    {\n        \"name\": \"pes123soa\",\n        \"email\": \"pessoa@admin.com\",\n        \"photoPath\": \"google.com/imagens\",\n        \"projectIds\": [],\n    }",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -430,11 +433,21 @@
 						}
 					],
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
 						"method": "DELETE",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "",
+							"raw": "{\r\n    \"password\": \"sadmokasdk!2A\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -442,47 +455,48 @@
 							}
 						},
 						"url": {
-							"raw": "{{base_url}}/api/User/fe487b1c-86f4-4408-89c5-52c8016e8e96",
+							"raw": "{{base_url}}/api/User",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
-								"User",
-								"fe487b1c-86f4-4408-89c5-52c8016e8e96"
+								"User"
 							]
 						},
 						"description": "This is a DELETE request, and it is used to delete data that was previously created via a POST request. You typically identify the entity being updated by including an identifier in the URL (eg. `id=1`).\n\nA successful DELETE request typically returns a `200 OK`, `202 Accepted`, or `204 No Content` response code."
 					},
 					"response": []
+				}
+			],
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{token}}",
+						"type": "string"
+					}
+				]
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
 				},
 				{
-					"name": "Patch Data",
-					"request": {
-						"method": "PATCH",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "[{\r\n    \"path\":\"/password\",\r\n    \"op\":\"replace\",\r\n    \"value\":\"senhacomplexa\"\r\n}]",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/api/User/",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"User",
-								""
-							]
-						}
-					},
-					"response": []
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
 				}
 			]
 		},
@@ -505,16 +519,6 @@
 						}
 					],
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [
 							{
@@ -559,40 +563,18 @@
 							}
 						}
 					],
-					"protocolProfileBehavior": {
-						"disableBodyPruning": true
-					},
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{token}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "GET",
 						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n    \"id\": \"0d2c4d65-b813-46de-a437-93fd1f2ab6ff\"\r\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
 						"url": {
-							"raw": "{{base_url}}/api/Project/GetProjectById",
+							"raw": "{{base_url}}/api/Project/fcd4ce51-ec33-4021-b6ed-bccafd50ed2e",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"Project",
-								"GetProjectById"
+								"fcd4ce51-ec33-4021-b6ed-bccafd50ed2e"
 							]
 						},
 						"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
@@ -682,7 +664,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"projectId\": \"0d2c4d65-b813-46de-a437-93fd1f2ab6ff\",\n    \"userId\": \"1131e80f-f0a5-4763-aeb6-ff335cef1d12\",\n    \"role\": \"worker\"\n}",
+							"raw": "{\n    \"projectId\": \"76b8c76d-17f4-4a4d-97d9-eb0a8754c112\",\n    \"userId\": \"6bff690f-830b-45fa-b85d-0e8385cb0f1e\",\n    \"role\": \"worker\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -690,14 +672,15 @@
 							}
 						},
 						"url": {
-							"raw": "{{base_url}}/api/Project/AddUser",
+							"raw": "{{base_url}}/api/Project/Users/add",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"Project",
-								"AddUser"
+								"Users",
+								"add"
 							]
 						},
 						"description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
@@ -705,13 +688,37 @@
 					"response": []
 				},
 				{
-					"name": "Patch Data Address",
+					"name": "RemoveUser from project",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Successful POST request\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
-						"method": "PATCH",
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "[{\r\n    \"path\":\"/address\",\r\n    \"op\":\"replace\",\r\n    \"value\":{\r\n        \"State\": \"São Paulo\",\r\n        \"Street\": \"Avenida Castelo Branco\",\r\n        \"City\": \"São Paulo\",\r\n        \"ZipCode\": \" 37500-903\",\r\n        \"Country\": \"Brazil\"\r\n    }\r\n}]",
+							"raw": "{\n    \"projectId\": \"76b8c76d-17f4-4a4d-97d9-eb0a8754c112\",\n    \"userId\": \"6bff690f-830b-45fa-b85d-0e8385cb0f1e\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -719,46 +726,49 @@
 							}
 						},
 						"url": {
-							"raw": "{{base_url}}/api/Project/64d48dcb-f265-46f8-b9b6-fdd5ed53e61b",
+							"raw": "{{base_url}}/api/Project/Users",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"Project",
-								"64d48dcb-f265-46f8-b9b6-fdd5ed53e61b"
+								"Users"
 							]
-						}
+						},
+						"description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
 					},
 					"response": []
+				}
+			],
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{token}}",
+						"type": "string"
+					}
+				]
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
 				},
 				{
-					"name": "Patch Data Name",
-					"request": {
-						"method": "PATCH",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "[{\r\n    \"path\":\"/name\",\r\n    \"op\":\"replace\",\r\n    \"value\":\"UNIFEI\"\r\n}]",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/api/Project/64d48dcb-f265-46f8-b9b6-fdd5ed53e61b",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"Project",
-								"64d48dcb-f265-46f8-b9b6-fdd5ed53e61b"
-							]
-						}
-					},
-					"response": []
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
 				}
 			]
 		},
@@ -784,7 +794,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"username\": \"My_username\",\r\n    \"firstname\": \"asdasdas\",\r\n    \"lastname\": \"asokdokas\",\r\n    \"email\": \"My_username@email.com\",\r\n    \"password\": \"sadmokasdk!2A\"\r\n}",
+							"raw": "{\r\n    \"username\": \"Lucas_oliver\",\r\n    \"firstname\": \"asdasadas\",\r\n    \"lastname\": \"asokdokas\",\r\n    \"email\": \"Lucas_oliver@email.com\",\r\n    \"password\": \"sadmokasdk!2A\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -824,7 +834,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"email\": \"My_username@email.com\",\r\n    \"password\": \"sadmokasdk!2A\"\r\n}",
+							"raw": "{\r\n    \"email\": \"Lucas_oliver@email.com\",\r\n    \"password\": \"sadmokasdk!2A\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -846,6 +856,23 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Get User Public",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/Lucas_oliver",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"Lucas_oliver"
+					]
+				}
+			},
+			"response": []
 		}
 	],
 	"event": [

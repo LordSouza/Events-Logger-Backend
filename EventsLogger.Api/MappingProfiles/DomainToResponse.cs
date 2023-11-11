@@ -10,9 +10,11 @@ public class DomainToResponse : Profile
     {
         CreateMap<User, UserDTO>();
         CreateMap<User, UserProjectRoleDTO>();
+        CreateMap<User, UserPublicDTO>();
         CreateMap<Address, AddressDTO>();
         CreateMap<Project, ProjectDTO>();
         CreateMap<Project, ProjectNameDTO>();
+        CreateMap<Entry, EntryPublicDTO>();
         CreateMap<Entry, EntryDTO>()
         .ForMember(
             dest => dest.UserDTO,

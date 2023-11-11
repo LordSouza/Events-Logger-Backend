@@ -13,14 +13,13 @@ using System.Net;
 
 namespace EventsLogger.Api.Controllers;
 
-//[Route("api/[controller]")]
-[Route("api/Project")]
+[Route("api/[controller]")]
 [ApiController]
-public class ProjectAPIController : BaseController
+public class ProjectController : BaseController
 {
     private readonly APIResponse _response;
 
-    public ProjectAPIController(IUnitOfWork unitOfWork,
+    public ProjectController(IUnitOfWork unitOfWork,
                               IMapper mapper,
                               UserManager<User> userManager,
                               IBlobManagement blobManagement,
@@ -37,7 +36,7 @@ public class ProjectAPIController : BaseController
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<ActionResult<APIResponse>> GetProjects([FromQuery] bool self)
+    public async Task<ActionResult<APIResponse>> GetProjects()
     {
         try
         {
@@ -55,21 +54,11 @@ public class ProjectAPIController : BaseController
                 return NotFound(_response);
             }
 
-
-            if (self)
-            {
-                IEnumerable<UserProject> userProjects = await _unitOfWork.UsersProjects.GetAllAsync(u => u.UserId == profile.Id, includeProperties: "Project");
-                _response.Result = _mapper.Map<List<UserProjectDTO>>(userProjects);
-                _response.StatusCode = HttpStatusCode.OK;
-                return Ok(_response);
-            }
-
-            IEnumerable<Project> ProjectList;
-            ProjectList = await _unitOfWork.Projects.GetAllAsync();
-
-            _response.Result = _mapper.Map<List<ProjectDTO>>(ProjectList);
+            IEnumerable<UserProject> userProjects = await _unitOfWork.UsersProjects.GetAllAsync(u => u.UserId == profile.Id, includeProperties: "Project");
+            _response.Result = _mapper.Map<List<UserProjectDTO>>(userProjects);
             _response.StatusCode = HttpStatusCode.OK;
             return Ok(_response);
+
         }
         catch (Exception ex)
         {
@@ -79,7 +68,7 @@ public class ProjectAPIController : BaseController
         return _response;
     }
 
-    [HttpPost("AddUser", Name = "AddUser")]
+    [HttpPost("Users/add", Name = "AddUser")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
@@ -114,6 +103,14 @@ public class ProjectAPIController : BaseController
                 return NotFound(_response);
             }
             List<UserProject> userProject = await _unitOfWork.UsersProjects.GetAllAsync(u => u.ProjectId == project.Id);
+            var loggedUserRole = userProject.FirstOrDefault(u => u.UserId == loggedUser.Id);
+            /// user with role "worker" can't remove others
+            /// unless he's removing him self
+            if (loggedUserRole == null || loggedUserRole.Role == "worker")
+            {
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
+            }
             if (userProject != null)
             {
                 foreach (var relation in userProject)
@@ -126,8 +123,72 @@ public class ProjectAPIController : BaseController
                     }
                 }
             }
+
             UserProject relationship = _mapper.Map<UserProject>(createUserProjectDTO);
             await _unitOfWork.UsersProjects.CreateAsync(relationship);
+
+            _response.StatusCode = HttpStatusCode.Created;
+            _response.Result = _mapper.Map<UserProjectDTO>(relationship);
+
+            return Ok(_response);
+        }
+        catch (Exception ex)
+        {
+            _response.IsSuccess = false;
+            _response.Messages = new List<string> { ex.ToString() };
+        }
+        return _response;
+    }
+
+    [HttpDelete("Users/remove", Name = "RemoveUser")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    public async Task<ActionResult<APIResponse>> RemoveUser([FromBody] UpdateUserProjectDTO UserProjectDeleteDTO)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
+            }
+
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+
+            List<UserProject> userProjects = await _unitOfWork.UsersProjects.GetAllAsync(u => u.ProjectId == UserProjectDeleteDTO.ProjectId);
+            var loggedUserRole = userProjects.FirstOrDefault(u => u.UserId == loggedUser.Id);
+            /// user with role "worker" can't remove others
+            /// unless he's removing him self
+            if (loggedUserRole == null || loggedUserRole.Role == "worker" && UserProjectDeleteDTO.UserId != loggedUser.Id)
+            {
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
+            }
+            /// user with role "owner can't remove self
+            if (loggedUserRole.Role == "owner" && UserProjectDeleteDTO.UserId == loggedUser.Id)
+            {
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
+            }
+            var userProjectToDelete = userProjects.FirstOrDefault(u => u.UserId == UserProjectDeleteDTO.UserId);
+            if (userProjectToDelete == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+            if (loggedUserRole.Role == "Manager" && userProjectToDelete.Role == "owner")
+            {
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
+            }
+            UserProject relationship = _mapper.Map<UserProject>(userProjectToDelete);
+            await _unitOfWork.UsersProjects.RemoveAsync(relationship);
 
             _response.StatusCode = HttpStatusCode.Created;
             _response.Result = _mapper.Map<UserProjectDTO>(relationship);
@@ -145,12 +206,12 @@ public class ProjectAPIController : BaseController
 
 
 
-    [HttpGet("GetProjectById", Name = "GetProjectById")]
+    [HttpGet("{id:guid}", Name = "GetProjectById")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<ActionResult<APIResponse>> GetProject([FromBody] GetByIdDTO projectIdDTO)
+    public async Task<ActionResult<APIResponse>> GetProject(Guid id)
     {
         try
         {
@@ -167,15 +228,9 @@ public class ProjectAPIController : BaseController
                 return NotFound(_response);
             }
 
-            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
-            if (profile == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
 
 
-            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == projectIdDTO.Id, includeProperties: "Address");
+            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == id, includeProperties: "Address");
 
             if (project == null)
             {
@@ -184,7 +239,7 @@ public class ProjectAPIController : BaseController
             }
 
             ProjectDTO projectDTO = _mapper.Map<ProjectDTO>(project);
-            List<UserProject> userProject = await _unitOfWork.UsersProjects.GetAllAsync(u => u.ProjectId == projectDTO.Id);
+            List<UserProject> userProject = await _unitOfWork.UsersProjects.GetAllAsync(u => u.ProjectId == projectDTO.Id, includeProperties: "User");
             List<UserProjectDTO> userProjectDTO = _mapper.Map<List<UserProjectDTO>>(userProject);
             foreach (var item in userProjectDTO)
             {
@@ -291,68 +346,58 @@ public class ProjectAPIController : BaseController
     }
 
 
-    // [ProducesResponseType(StatusCodes.Status204NoContent)]
-    // [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    // [ProducesResponseType(StatusCodes.Status404NotFound)]
-    // [HttpDelete("{id:guid}", Name = "DeleteProject")]
-    // public async Task<ActionResult<APIResponse>> DeleteProject(Guid id)
-    // {
-    //     try
-    //     {
-    //         var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
-    //         if (loggedUser == null)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.NotFound;
-    //             _response.IsSuccess = false;
-    //             return NotFound(_response);
-    //         }
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [HttpDelete("{id:guid}", Name = "DeleteProject")]
+    public async Task<ActionResult<APIResponse>> DeleteProject(Guid id)
+    {
+        try
+        {
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                _response.IsSuccess = false;
+                return NotFound(_response);
+            }
 
+            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == id);
+            if (project == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                _response.IsSuccess = false;
+                _response.Messages!.Add("The project with ID was not found");
+                return NotFound(_response);
+            }
 
+            var projectUsers = await _unitOfWork.UsersProjects.GetAllAsync(r => r.ProjectId == project.Id);
+            var userPermission = projectUsers.FirstOrDefault(u => u.UserId == loggedUser.Id);
+            if (userPermission == null || userPermission.Role != "owner")
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                _response.IsSuccess = false;
+                return NotFound(_response);
+            }
 
-    //         var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
-    //         if (profile == null)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.NotFound;
-    //             _response.IsSuccess = false;
-    //             return NotFound(_response);
-    //         }
+            // remove address
+            project.Address = await _unitOfWork.Addresses.GetAsync(u => u.Id == project.AddressId, false);
+            await _unitOfWork.Projects.RemoveAsync(project);
+            await _unitOfWork.Addresses.RemoveAsync(project.Address);
 
-
-    //         var isPassword = await _userManager.CheckPasswordAsync(loggedUser, userPasswordRequestDTO.Password);
-    //         if (!isPassword)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.NotFound;
-    //             _response.IsSuccess = false;
-    //             _response.Messages.Add("Wrong Password");
-    //             return NotFound(_response);
-    //         }
-
-    //         var project = await _unitOfWork.Projects.GetAsync(u => u.Id == id);
-    //         if (project == null)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.NotFound;
-    //             _response.IsSuccess = false;
-    //             _response.Messages!.Add("The project with ID was not found");
-    //             return NotFound(_response);
-    //         }
-    //         // remove address
-    //         project.Address = await _unitOfWork.Addresses.GetAsync(u => u.Id == project.AddressId, false);
-    //         //await _unitOfWork.Addresses.RemoveAsync(project.Address);
-    //         await _unitOfWork.Projects.RemoveAsync(project);
-
-    //         _response.StatusCode = HttpStatusCode.NoContent;
-    //         _response.Messages!.Add("The Project was deleted");
-    //         _response.IsSuccess = true;
-    //         return Ok(_response);
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         _response.StatusCode = HttpStatusCode.InternalServerError;
-    //         _response.IsSuccess = false;
-    //         _response.Messages = new List<string> { ex.ToString() };
-    //     }
-    //     return _response;
-    // }
+            _response.StatusCode = HttpStatusCode.NoContent;
+            _response.Messages!.Add("The Project was deleted");
+            _response.IsSuccess = true;
+            return Ok(_response);
+        }
+        catch (Exception ex)
+        {
+            _response.StatusCode = HttpStatusCode.InternalServerError;
+            _response.IsSuccess = false;
+            _response.Messages = new List<string> { ex.ToString() };
+        }
+        return _response;
+    }
 
 
     // [HttpPatch("{id:guid}", Name = "UpdatePartialProject")]
