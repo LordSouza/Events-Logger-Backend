@@ -47,6 +47,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+
 builder.Services.AddDefaultIdentity<User>(options =>
 {
     options.Password.RequiredLength = 8;
