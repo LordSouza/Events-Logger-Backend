@@ -76,7 +76,7 @@ public class ProjectController : BaseController
     /// <summary>
     /// EndPoint <c>AddNewUser<\c> add a new user to the project with a role
     /// </summary>
-    /// <param name="CreateNewUserProjectDTO"></param>
+    /// <param name="createNewUserProjectDTO"></param>
     /// <returns></returns>
     [HttpPost("Users/New", Name = "AddNewUser")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -84,7 +84,7 @@ public class ProjectController : BaseController
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<APIResponse>> AddNewUser([FromForm] CreateNewUserProjectDTO CreateNewUserProjectDTO)
+    public async Task<ActionResult<APIResponse>> AddNewUser([FromForm] CreateNewUserProjectDTO createNewUserProjectDTO)
     {
         try
         {
@@ -106,7 +106,7 @@ public class ProjectController : BaseController
             }
 
 
-            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == CreateNewUserProjectDTO.ProjectId);
+            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == createNewUserProjectDTO.ProjectId);
             if (project == null)
             {
                 _response.Messages.Add("A project with this ID does not exists.");
@@ -127,7 +127,7 @@ public class ProjectController : BaseController
                 return Unauthorized(_response);
             }
 
-            var userExists = await _userManager.FindByEmailAsync(CreateNewUserProjectDTO.Email);
+            var userExists = await _userManager.FindByEmailAsync(createNewUserProjectDTO.Email);
             if (userExists != null)
             {
                 _response.StatusCode = HttpStatusCode.BadRequest;
@@ -139,17 +139,17 @@ public class ProjectController : BaseController
             var newUser = new User()
             {
                 Id = Guid.NewGuid().ToString(),
-                Email = CreateNewUserProjectDTO.Email,
-                Name = CreateNewUserProjectDTO.FirstName + " " + CreateNewUserProjectDTO.LastName,
-                UserName = CreateNewUserProjectDTO.UserName ?? CreateNewUserProjectDTO.Email,
-                PhotoPath = CreateNewUserProjectDTO.PhotoPath ?? string.Empty,
+                Email = createNewUserProjectDTO.Email,
+                Name = createNewUserProjectDTO.FirstName + " " + createNewUserProjectDTO.LastName,
+                UserName = createNewUserProjectDTO.UserName ?? createNewUserProjectDTO.Email,
+                PhotoPath = createNewUserProjectDTO.PhotoPath ?? string.Empty,
             };
 
             await _userManager.CreateAsync(newUser, GeneratePassword());
 
             UserProject relationship = new()
             {
-                Role = CreateNewUserProjectDTO.Role,
+                Role = createNewUserProjectDTO.Role,
                 Project = project,
                 ProjectId = project.Id,
                 User = newUser,
@@ -178,7 +178,7 @@ public class ProjectController : BaseController
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<APIResponse>> DeleteUser([FromForm] CreateNewUserProjectDTO CreateNewUserProjectDTO)
+    public async Task<ActionResult<APIResponse>> DeleteUser([FromForm] DeleteUserFromProjectDTO deleteUserFromProjectDTO)
     {
         try
         {
@@ -193,14 +193,14 @@ public class ProjectController : BaseController
             }
             if (!ModelState.IsValid)
             {
-                _response.Messages.Add("Your request needs UserIs");
+                _response.Messages.Add("Your request needs UserId");
                 _response.IsSuccess = false;
                 _response.StatusCode = HttpStatusCode.BadRequest;
                 return BadRequest(_response);
             }
 
 
-            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == CreateNewUserProjectDTO.ProjectId);
+            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == deleteUserFromProjectDTO.ProjectId);
             if (project == null)
             {
                 _response.Messages.Add("A project with this ID does not exists.");
@@ -209,9 +209,9 @@ public class ProjectController : BaseController
                 return NotFound(_response);
             }
 
-
-            List<UserProject> userProject = await _unitOfWork.UsersProjects.GetAllAsync(u => u.ProjectId == project.Id);
-            var loggedUserRole = userProject.FirstOrDefault(u => u.UserId == loggedUser.Id);
+            // check who is trying to delete
+            List<UserProject> usersProject = await _unitOfWork.UsersProjects.GetAllAsync(u => u.ProjectId == project.Id);
+            var loggedUserRole = usersProject.FirstOrDefault(u => u.UserId == loggedUser.Id);
             // user with role worker in a project can't add others
             if (loggedUserRole == null || loggedUserRole.Role == "worker")
             {
@@ -221,39 +221,37 @@ public class ProjectController : BaseController
                 return Unauthorized(_response);
             }
 
-            var userExists = await _userManager.FindByEmailAsync(CreateNewUserProjectDTO.Email);
-            if (userExists != null)
+            var userToDelete = await _userManager.FindByIdAsync(deleteUserFromProjectDTO.UserId);
+            if (userToDelete == null)
             {
-                _response.StatusCode = HttpStatusCode.BadRequest;
+                _response.StatusCode = HttpStatusCode.NotFound;
                 _response.IsSuccess = false;
-                _response.Messages.Add("User with email already exists");
-                return BadRequest(_response);
+                _response.Messages.Add("User with this Id doesn't exist.");
+                return NotFound(_response);
             }
 
-            var newUser = new User()
+            // check the user to be deleted
+            var userToDeleteRole = usersProject.FirstOrDefault(u => u.UserId == userToDelete.Id);
+            // user with role worker in a project can't add others
+            if (userToDeleteRole == null)
             {
-                Id = Guid.NewGuid().ToString(),
-                Email = CreateNewUserProjectDTO.Email,
-                Name = CreateNewUserProjectDTO.FirstName + " " + CreateNewUserProjectDTO.LastName,
-                UserName = CreateNewUserProjectDTO.UserName ?? CreateNewUserProjectDTO.Email,
-                PhotoPath = CreateNewUserProjectDTO.PhotoPath ?? string.Empty,
-            };
+                _response.Messages.Add("This user is not in this project");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
 
-            await _userManager.CreateAsync(newUser, GeneratePassword());
-
-            UserProject relationship = new()
+            if (userToDeleteRole.Role == "owner")
             {
-                Role = CreateNewUserProjectDTO.Role,
-                Project = project,
-                ProjectId = project.Id,
-                User = newUser,
-                UserId = newUser.Id
-            };
-            await _unitOfWork.UsersProjects.CreateAsync(relationship);
+                _response.Messages.Add("You can't delete the owner of this project");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.Unauthorized;
+                return Unauthorized(_response);
+            }
+            await _userManager.DeleteAsync(userToDelete);
 
-            _response.StatusCode = HttpStatusCode.Created;
-            _response.Result = _mapper.Map<UserProjectDTO>(relationship);
-            _response.Messages.Add("The user was created and added to the project with success.");
+            _response.StatusCode = HttpStatusCode.OK;
+            _response.Messages.Add("User deleted with success.");
             return Ok(_response);
         }
         catch (Exception ex)

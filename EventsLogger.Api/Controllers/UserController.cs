@@ -200,70 +200,7 @@ public class UserController : BaseController
 
 
 
-    /// <summary>
-    /// This request wasn't tested after the changes
-    /// </summary>
-    /// <param name="patchDTO"></param>
-    /// <returns></returns>
-    // [HttpPatch("{Username}", Name = "UpdatePhoto")]
-    // [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    // [ProducesResponseType(StatusCodes.Status204NoContent)]
-    // [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    // public async Task<ActionResult<APIResponse>> UpdatePartialUser(string username, [FromForm] JsonPatchDocument<UpdateUserPhotoDTO> patchDTO)
-    // {
-    //     try
-    //     {
-    //         if (!ModelState.IsValid)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.BadRequest;
-    //             return BadRequest(_response);
-    //         }
 
-    //         var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
-    //         if (loggedUser == null)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.NotFound;
-    //             return NotFound(_response);
-    //         }
-
-    //         User userToChange = await _unitOfWork.Users.GetAsync(u => u.UserName == username);
-    //         if (userToChange.Id != loggedUser.Id)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.BadRequest;
-    //             return BadRequest(_response);
-    //         }
-    //         if (patchDTO.Operations[0].path != "/photopath")
-    //         {
-    //             _response.StatusCode = HttpStatusCode.NotFound;
-    //             return NotFound(_response);
-    //         }
-
-    //         // Url = UploadFile(patchDTO)
-    //         // refactor this part
-    //         UpdateUserDTO UserDTO = _mapper.Map<UpdateUserDTO>(loggedUser);
-
-    //         // patchDTO.ApplyTo(UserDTO, ModelState);
-
-    //         User model = _mapper.Map<User>(UserDTO);
-
-    //         await _unitOfWork.Users.UpdateAsync(model);
-
-    //         if (!ModelState.IsValid)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.BadRequest;
-    //             return BadRequest(_response);
-    //         }
-    //         _response.StatusCode = HttpStatusCode.NoContent;
-    //         _response.IsSuccess = true;
-    //         return Ok(_response);
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         _response.IsSuccess = false;
-    //         _response.Messages = new List<string> { ex.ToString() };
-    //     }
-    //     return _response;
-    // }
 
 
 }
