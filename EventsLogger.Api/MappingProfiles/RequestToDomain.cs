@@ -119,7 +119,7 @@ public class RequestToDomain : Profile
             des => des.UpdatedDate,
             opt => opt.MapFrom(src => DateTime.UtcNow));
 
-        CreateMap<UpdateUserProjectDTO, UserProject>()
+        CreateMap<RemoveUserProjectDTO, UserProject>()
         .ForMember(
             dest => dest.Id,
             opt => opt.Ignore())

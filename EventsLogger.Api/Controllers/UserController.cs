@@ -35,9 +35,16 @@ public class UserController : BaseController
 
 
 
+    /// <summary>
+    /// Get all users,
+    /// can filter by username
+    /// </summary>
+    /// <param name="username"></param>
+    /// <returns></returns>
     [HttpGet("All", Name = "GetAll")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> GetUsers([FromQuery(Name = "UserName")] string? username)
     {
@@ -47,18 +54,12 @@ public class UserController : BaseController
             var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
             if (loggedUser == null)
             {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
-
-            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
-            if (profile == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
+                _response.Messages.Add("You are not logged in");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.Unauthorized;
+                return Unauthorized(_response);
             }
             IEnumerable<User> UserList;
-            // IEnumerable<UserProject> UserProjectList;
             if (username != null)
             {
                 UserList = await _unitOfWork.Users.GetAllAsync(u => u.UserName!.Contains(username));
@@ -67,29 +68,19 @@ public class UserController : BaseController
             {
                 UserList = await _unitOfWork.Users.GetAllAsync();
             }
-            // UserList = await _unitOfWork.Users.GetAllAsync(u => u.UserName == username);
             _response.Result = _mapper.Map<List<UserDTO>>(UserList);
             _response.StatusCode = HttpStatusCode.OK;
             return Ok(_response);
-
-            // if (project != null)
-            // {
-
-            //     // UserProjectList = await _unitOfWork.UsersProjects.GetAllAsync(u => u.ProjectId == project);
-            //     UserList = await _unitOfWork.Users.GetAllAsync(u => u.Name == name);
-            //     _response.Result = _mapper.Map<List<UserDTO>>(UserList);
-            //     _response.StatusCode = HttpStatusCode.OK;
-            //     return Ok(_response);
-            // }
 
 
         }
         catch (Exception ex)
         {
+            _response.StatusCode = HttpStatusCode.Unauthorized;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
-        return _response;
+        return StatusCode(StatusCodes.Status500InternalServerError, _response);
     }
 
 
@@ -110,18 +101,20 @@ public class UserController : BaseController
         try
         {
 
-            if (!ModelState.IsValid)
-            {
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                return BadRequest(_response);
-            }
-
             var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
             if (loggedUser == null)
             {
-                _response.StatusCode = HttpStatusCode.NotFound;
+                _response.Messages.Add("You are not logged in");
                 _response.IsSuccess = false;
-                return NotFound(_response);
+                _response.StatusCode = HttpStatusCode.Unauthorized;
+                return Unauthorized(_response);
+            }
+            if (!ModelState.IsValid)
+            {
+                _response.Messages.Add("Your request needs to have your password.");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
             }
 
 
@@ -143,56 +136,67 @@ public class UserController : BaseController
         }
         catch (Exception ex)
         {
+            _response.StatusCode = HttpStatusCode.Unauthorized;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
-        return _response;
+        return StatusCode(StatusCodes.Status500InternalServerError, _response);
     }
 
 
-    // /// <summary>
-    // /// Update self
-    // /// </summary>
-    // /// <param name="updateUserDTO"></param>
-    // /// <returns></returns>
-    // [ProducesResponseType(StatusCodes.Status204NoContent)]
-    // [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    // [HttpPut(Name = "UpdateUser")]
-    // [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    // public async Task<ActionResult<APIResponse>> UpdateUser([FromBody] UpdateUserDTO updateUserDTO)
-    // {
-    //     try
-    //     {
-    //         if (!ModelState.IsValid)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.BadRequest;
-    //             return BadRequest(_response);
-    //         }
+    /// <summary>
+    /// Update self
+    /// </summary>
+    /// <param name="updateUserDTO"></param>
+    /// <returns></returns>
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [HttpPut(Name = "UpdateUser")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    public async Task<ActionResult<APIResponse>> UpdateUser([FromBody] UpdateUserDTO updateUserDTO)
+    {
+        try
+        {
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.Messages.Add("You are not logged in");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.Unauthorized;
+                return Unauthorized(_response);
+            }
+            if (!ModelState.IsValid)
+            {
+                _response.Messages.Add("Your request needs to have a ProjectId, Role, FirstName, LastName, Email, and can have a Photo, and UserName");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
+            }
 
-    //         var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
-    //         if (loggedUser == null)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.NotFound;
-    //             return NotFound(_response);
-    //         }
 
-    //         loggedUser.Name = updateUserDTO.FirstName + " " + updateUserDTO.LastName;
-    //         loggedUser.Email = updateUserDTO.Email;
-    //         loggedUser.PhotoPath = updateUserDTO.PhotoPath;
+            loggedUser.Name = updateUserDTO.FirstName + " " + updateUserDTO.LastName ?? loggedUser.Name;
+            loggedUser.Email = updateUserDTO.Email ?? loggedUser.Email;
+            loggedUser.PhotoPath = updateUserDTO.PhotoPath ?? loggedUser.PhotoPath;
 
-    //         await _userManager.UpdateAsync(loggedUser);
+            if (updateUserDTO.Password != null && updateUserDTO.NewPassword != null)
+            {
+                await _userManager.ChangePasswordAsync(loggedUser, updateUserDTO.Password, updateUserDTO.NewPassword);
+            }
 
-    //         _response.StatusCode = HttpStatusCode.NoContent;
-    //         _response.IsSuccess = true;
-    //         return Ok(_response);
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         _response.IsSuccess = false;
-    //         _response.Messages = new List<string> { ex.ToString() };
-    //     }
-    //     return _response;
-    // }
+            await _userManager.UpdateAsync(loggedUser);
+
+            _response.StatusCode = HttpStatusCode.NoContent;
+            _response.IsSuccess = true;
+            return Ok(_response);
+        }
+        catch (Exception ex)
+        {
+            _response.StatusCode = HttpStatusCode.Unauthorized;
+            _response.IsSuccess = false;
+            _response.Messages = new List<string> { ex.ToString() };
+        }
+        return StatusCode(StatusCodes.Status500InternalServerError, _response);
+    }
 
 
 
