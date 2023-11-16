@@ -64,7 +64,7 @@ public class ProjectController : BaseController
         }
         catch (Exception ex)
         {
-            _response.StatusCode = HttpStatusCode.Unauthorized;
+            _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
@@ -138,7 +138,7 @@ public class ProjectController : BaseController
         }
         catch (Exception ex)
         {
-            _response.StatusCode = HttpStatusCode.Unauthorized;
+            _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
@@ -169,7 +169,7 @@ public class ProjectController : BaseController
 
             if (!ModelState.IsValid)
             {
-                _response.Messages.Add("Your request needs to have a name and a address.");
+                _response.Messages.Add("Your request is missing one or more parameter.");
                 _response.IsSuccess = false;
                 _response.StatusCode = HttpStatusCode.BadRequest;
                 return BadRequest(_response);
@@ -217,7 +217,7 @@ public class ProjectController : BaseController
         }
         catch (Exception ex)
         {
-            _response.StatusCode = HttpStatusCode.Unauthorized;
+            _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
@@ -280,7 +280,7 @@ public class ProjectController : BaseController
         }
         catch (Exception ex)
         {
-            _response.StatusCode = HttpStatusCode.Unauthorized;
+            _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
@@ -292,13 +292,14 @@ public class ProjectController : BaseController
     /// <summary>
     /// Update self
     /// </summary>
-    /// <param name="updateUserDTO"></param>
+    /// <param name="updateUserFromProjectDTO"></param>
     /// <returns></returns>
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [HttpPut(Name = "UpdateUser")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<ActionResult<APIResponse>> UpdateUser([FromBody] UpdateUserDTO updateUserDTO)
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [HttpPut("Users/Update", Name = "UpdateUserFromProject")]
+    public async Task<ActionResult<APIResponse>> UpdateUserFromProject([FromBody] UpdateUserFromProjectDTO updateUserFromProjectDTO)
     {
         try
         {
@@ -312,35 +313,76 @@ public class ProjectController : BaseController
             }
             if (!ModelState.IsValid)
             {
-                _response.Messages.Add("Your request needs to have a ProjectId, Role, FirstName, LastName, Email, and can have a Photo, and UserName");
+                _response.Messages.Add("Your request is missing one or more parameter.");
                 _response.IsSuccess = false;
                 _response.StatusCode = HttpStatusCode.BadRequest;
                 return BadRequest(_response);
             }
 
 
-            loggedUser.Name = updateUserDTO.FirstName + " " + updateUserDTO.LastName ?? loggedUser.Name;
-            loggedUser.Email = updateUserDTO.Email ?? loggedUser.Email;
-            if (updateUserDTO.File != null)
+            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == updateUserFromProjectDTO.ProjectId);
+            if (project == null)
             {
-                var photoPath = await UploadFile(updateUserDTO.File);
-                loggedUser.PhotoPath = photoPath;
+                _response.Messages.Add("A project with this ID does not exists.");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
             }
 
-            if (updateUserDTO.Password != null && updateUserDTO.NewPassword != null)
+
+            List<UserProject> userProject = await _unitOfWork.UsersProjects.GetAllAsync(u => u.ProjectId == project.Id);
+            var loggedUserRole = userProject.FirstOrDefault(u => u.UserId == loggedUser.Id);
+            // user with role worker in a project can't add others
+            if (loggedUserRole == null || loggedUserRole.Role == "worker")
             {
-                await _userManager.ChangePasswordAsync(loggedUser, updateUserDTO.Password, updateUserDTO.NewPassword);
+                _response.Messages.Add("You are not part of the management of this project.");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.Unauthorized;
+                return Unauthorized(_response);
             }
 
-            await _userManager.UpdateAsync(loggedUser);
+            var userToUpdate = await _userManager.FindByIdAsync(updateUserFromProjectDTO.UserId);
+            if (userToUpdate == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                _response.IsSuccess = false;
+                _response.Messages.Add("User with this Id doesn't exist.");
+                return NotFound(_response);
+            }
 
+            var userToUpdateRole = userProject.FirstOrDefault(u => u.UserId == userToUpdate.Id);
+            if (userToUpdateRole == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                _response.IsSuccess = false;
+                _response.Messages.Add("This user is not in this project.");
+                return NotFound(_response);
+            }
+
+            if (loggedUserRole.Role == "manager" && userToUpdateRole.Role == "owner")
+            {
+                _response.StatusCode = HttpStatusCode.Unauthorized;
+                _response.IsSuccess = false;
+                _response.Messages.Add("A manager can't change the owner information.");
+                return Unauthorized(_response);
+            }
+
+            if (updateUserFromProjectDTO.File != null)
+            {
+                var photoPath = await UploadFile(updateUserFromProjectDTO.File);
+                userToUpdate.PhotoPath = photoPath;
+            }
+
+
+            await _userManager.UpdateAsync(userToUpdate);
+            _response.Messages.Add("the user was updated with success.");
             _response.StatusCode = HttpStatusCode.NoContent;
             _response.IsSuccess = true;
             return Ok(_response);
         }
         catch (Exception ex)
         {
-            _response.StatusCode = HttpStatusCode.Unauthorized;
+            _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
@@ -355,7 +397,7 @@ public class ProjectController : BaseController
     /// </summary>
     /// <param name="createNewUserProjectDTO"></param>
     /// <returns></returns>
-    [HttpPost("Users/New", Name = "AddNewUser")]
+    [HttpPost("Users/Create", Name = "AddNewUser")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -376,7 +418,7 @@ public class ProjectController : BaseController
             }
             if (!ModelState.IsValid)
             {
-                _response.Messages.Add("Your request needs to have a ProjectId, Role, FirstName, LastName, Email, and can have a Photo, and UserName");
+                _response.Messages.Add("Your request is missing one or more parameter.");
                 _response.IsSuccess = false;
                 _response.StatusCode = HttpStatusCode.BadRequest;
                 return BadRequest(_response);
@@ -441,7 +483,7 @@ public class ProjectController : BaseController
         }
         catch (Exception ex)
         {
-            _response.StatusCode = HttpStatusCode.Unauthorized;
+            _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
@@ -449,13 +491,13 @@ public class ProjectController : BaseController
     }
 
 
-    [HttpDelete("Users/New", Name = "DeleteUser")]
+    [HttpDelete("Users/Delete", Name = "DeleteUserFromProject")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<APIResponse>> DeleteUser([FromForm] DeleteUserFromProjectDTO deleteUserFromProjectDTO)
+    public async Task<ActionResult<APIResponse>> DeleteUserFromProject([FromForm] DeleteUserFromProjectDTO deleteUserFromProjectDTO)
     {
         try
         {
@@ -470,7 +512,7 @@ public class ProjectController : BaseController
             }
             if (!ModelState.IsValid)
             {
-                _response.Messages.Add("Your request needs UserId");
+                _response.Messages.Add("Your request is missing one or more parameter.");
                 _response.IsSuccess = false;
                 _response.StatusCode = HttpStatusCode.BadRequest;
                 return BadRequest(_response);
@@ -533,7 +575,7 @@ public class ProjectController : BaseController
         }
         catch (Exception ex)
         {
-            _response.StatusCode = HttpStatusCode.Unauthorized;
+            _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
@@ -559,7 +601,7 @@ public class ProjectController : BaseController
         {
             if (!ModelState.IsValid)
             {
-                _response.Messages.Add("Your request needs to have a ProjectId, Role and userId.");
+                _response.Messages.Add("Your request is missing one or more parameter.");
                 _response.IsSuccess = false;
                 _response.StatusCode = HttpStatusCode.BadRequest;
                 return BadRequest(_response);
@@ -610,12 +652,12 @@ public class ProjectController : BaseController
 
             _response.StatusCode = HttpStatusCode.Created;
             _response.Result = _mapper.Map<UserProjectDTO>(relationship);
-            _response.Messages.Add("The user as added with success");
+            _response.Messages.Add("The user was successfully added to the project.");
             return Ok(_response);
         }
         catch (Exception ex)
         {
-            _response.StatusCode = HttpStatusCode.Unauthorized;
+            _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
@@ -649,7 +691,7 @@ public class ProjectController : BaseController
 
             if (!ModelState.IsValid)
             {
-                _response.Messages.Add("Your request needs to have a ProjectId and userId.");
+                _response.Messages.Add("Your request is missing one or more parameter.");
                 _response.IsSuccess = false;
                 _response.StatusCode = HttpStatusCode.BadRequest;
                 return BadRequest(_response);
@@ -701,7 +743,7 @@ public class ProjectController : BaseController
         }
         catch (Exception ex)
         {
-            _response.StatusCode = HttpStatusCode.Unauthorized;
+            _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
