@@ -73,6 +73,283 @@ public class ProjectController : BaseController
     }
 
 
+
+
+
+
+    /// <summary>
+    /// EndPoint <c>GetProjectById<\c> get a project by his id
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    [HttpGet("{id:guid}", Name = "GetProjectById")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<APIResponse>> GetProject(Guid id)
+    {
+        try
+        {
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.Messages.Add("You are not logged in.");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.Unauthorized;
+                return Unauthorized(_response);
+            }
+
+            if (!ModelState.IsValid)
+            {
+                _response.Messages.Add("Your request needs to have a Id.");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
+            }
+
+
+            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == id, includeProperties: "Address");
+
+            if (project == null)
+            {
+                _response.Messages.Add("You aren't part of a project.");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+
+            ProjectDTO projectDTO = _mapper.Map<ProjectDTO>(project);
+            List<UserProject> userProject = await _unitOfWork.UsersProjects.GetAllAsync(u => u.ProjectId == projectDTO.Id, includeProperties: "User");
+            List<UserProjectDTO> userProjectDTO = _mapper.Map<List<UserProjectDTO>>(userProject);
+            foreach (var item in userProjectDTO)
+            {
+                User user = await _unitOfWork.Users.GetAsync(u => u.Id == item.UserId.ToString());
+                UserProjectRoleDTO userDTO = _mapper.Map<UserProjectRoleDTO>(user);
+                userDTO.Role = item.Role;
+                projectDTO.Users.Add(userDTO);
+            }
+
+
+            _response.StatusCode = HttpStatusCode.OK;
+            _response.Result = projectDTO;
+            return Ok(_response);
+        }
+        catch (Exception ex)
+        {
+            _response.StatusCode = HttpStatusCode.Unauthorized;
+            _response.IsSuccess = false;
+            _response.Messages = new List<string> { ex.ToString() };
+        }
+        return StatusCode(StatusCodes.Status500InternalServerError, _response);
+    }
+
+    /// <summary>
+    ///  EndPoint <c>CreateProject<\c> Creates a project and assigns the creator as the owner of the project
+    /// </summary>
+    /// <param name="createProjectDTO"></param>
+    /// <returns></returns>
+    [HttpPost]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<APIResponse>> CreateProject([FromBody] CreateProjectDTO createProjectDTO)
+    {
+        try
+        {
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.Messages.Add("You are not logged in.");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.Unauthorized;
+                return Unauthorized(_response);
+            }
+
+            if (!ModelState.IsValid)
+            {
+                _response.Messages.Add("Your request needs to have a name and a address.");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
+            }
+
+
+            Address newAddress = new()
+            {
+                State = createProjectDTO.Address.State,
+                Street = createProjectDTO.Address.Street,
+                City = createProjectDTO.Address.City,
+                ZipCode = createProjectDTO.Address.ZipCode,
+                Country = createProjectDTO.Address.Country,
+            };
+
+            Project newProject = new()
+            {
+                Name = createProjectDTO.Name,
+                Address = newAddress,
+                AddressId = newAddress.Id
+            };
+
+            await _unitOfWork.Addresses.CreateAsync(newAddress);
+            await _unitOfWork.Projects.CreateAsync(newProject);
+
+            // add the user to the project
+            UserProject newUserProject = new()
+            {
+                CreatedDate = DateTime.UtcNow,
+                UserId = loggedUser.Id,
+                ProjectId = newProject.Id,
+                Role = "owner"
+            };
+
+            await _unitOfWork.UsersProjects.CreateAsync(newUserProject);
+
+
+            ProjectDTO projectDTO = _mapper.Map<ProjectDTO>(newProject);
+
+            _response.StatusCode = HttpStatusCode.Created;
+            _response.Messages.Add("The Project was created with success");
+            _response.Result = projectDTO;
+
+            return CreatedAtRoute("GetProjectById", new { id = newProject.Id }, _response);
+        }
+        catch (Exception ex)
+        {
+            _response.StatusCode = HttpStatusCode.Unauthorized;
+            _response.IsSuccess = false;
+            _response.Messages = new List<string> { ex.ToString() };
+        }
+        return StatusCode(StatusCodes.Status500InternalServerError, _response);
+    }
+
+
+    /// <summary>
+    /// EndPoint <c>DeleteProject<\c> Delete the project if the user is the owner
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [HttpDelete("{id:guid}", Name = "DeleteProject")]
+    public async Task<ActionResult<APIResponse>> DeleteProject(Guid id)
+    {
+        try
+        {
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.Messages.Add("You are not logged in.");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.Unauthorized;
+                return Unauthorized(_response);
+            }
+
+
+
+            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == id);
+            if (project == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                _response.IsSuccess = false;
+                _response.Messages!.Add("The project with ID was not found");
+                return NotFound(_response);
+            }
+
+            var projectUsers = await _unitOfWork.UsersProjects.GetAllAsync(r => r.ProjectId == project.Id);
+            var userPermission = projectUsers.FirstOrDefault(u => u.UserId == loggedUser.Id);
+            if (userPermission == null || userPermission.Role != "owner")
+            {
+                _response.Messages.Add("You are not the owner of the project");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.Forbidden;
+                return StatusCode(StatusCodes.Status403Forbidden, _response);
+            }
+
+            // remove address
+            project.Address = await _unitOfWork.Addresses.GetAsync(u => u.Id == project.AddressId, false);
+            await _unitOfWork.Projects.RemoveAsync(project);
+            await _unitOfWork.Addresses.RemoveAsync(project.Address);
+
+            _response.StatusCode = HttpStatusCode.NoContent;
+            _response.Messages.Add("The Project was deleted");
+            _response.IsSuccess = true;
+            return Ok(_response);
+        }
+        catch (Exception ex)
+        {
+            _response.StatusCode = HttpStatusCode.Unauthorized;
+            _response.IsSuccess = false;
+            _response.Messages = new List<string> { ex.ToString() };
+        }
+        return StatusCode(StatusCodes.Status500InternalServerError, _response);
+    }
+
+
+
+    /// <summary>
+    /// Update self
+    /// </summary>
+    /// <param name="updateUserDTO"></param>
+    /// <returns></returns>
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [HttpPut(Name = "UpdateUser")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    public async Task<ActionResult<APIResponse>> UpdateUser([FromBody] UpdateUserDTO updateUserDTO)
+    {
+        try
+        {
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.Messages.Add("You are not logged in");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.Unauthorized;
+                return Unauthorized(_response);
+            }
+            if (!ModelState.IsValid)
+            {
+                _response.Messages.Add("Your request needs to have a ProjectId, Role, FirstName, LastName, Email, and can have a Photo, and UserName");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
+            }
+
+
+            loggedUser.Name = updateUserDTO.FirstName + " " + updateUserDTO.LastName ?? loggedUser.Name;
+            loggedUser.Email = updateUserDTO.Email ?? loggedUser.Email;
+            if (updateUserDTO.File != null)
+            {
+                var photoPath = await UploadFile(updateUserDTO.File);
+                loggedUser.PhotoPath = photoPath;
+            }
+
+            if (updateUserDTO.Password != null && updateUserDTO.NewPassword != null)
+            {
+                await _userManager.ChangePasswordAsync(loggedUser, updateUserDTO.Password, updateUserDTO.NewPassword);
+            }
+
+            await _userManager.UpdateAsync(loggedUser);
+
+            _response.StatusCode = HttpStatusCode.NoContent;
+            _response.IsSuccess = true;
+            return Ok(_response);
+        }
+        catch (Exception ex)
+        {
+            _response.StatusCode = HttpStatusCode.Unauthorized;
+            _response.IsSuccess = false;
+            _response.Messages = new List<string> { ex.ToString() };
+        }
+        return StatusCode(StatusCodes.Status500InternalServerError, _response);
+    }
+
+
+
+
     /// <summary>
     /// EndPoint <c>AddNewUser<\c> add a new user to the project with a role
     /// </summary>
@@ -432,292 +709,6 @@ public class ProjectController : BaseController
     }
 
 
-
-
-    /// <summary>
-    /// EndPoint <c>GetProjectById<\c> get a project by his id
-    /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
-    [HttpGet("{id:guid}", Name = "GetProjectById")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<APIResponse>> GetProject(Guid id)
-    {
-        try
-        {
-            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
-            if (loggedUser == null)
-            {
-                _response.Messages.Add("You are not logged in.");
-                _response.IsSuccess = false;
-                _response.StatusCode = HttpStatusCode.Unauthorized;
-                return Unauthorized(_response);
-            }
-
-            if (!ModelState.IsValid)
-            {
-                _response.Messages.Add("Your request needs to have a Id.");
-                _response.IsSuccess = false;
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                return BadRequest(_response);
-            }
-
-
-            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == id, includeProperties: "Address");
-
-            if (project == null)
-            {
-                _response.Messages.Add("You aren't part of a project.");
-                _response.IsSuccess = false;
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
-
-            ProjectDTO projectDTO = _mapper.Map<ProjectDTO>(project);
-            List<UserProject> userProject = await _unitOfWork.UsersProjects.GetAllAsync(u => u.ProjectId == projectDTO.Id, includeProperties: "User");
-            List<UserProjectDTO> userProjectDTO = _mapper.Map<List<UserProjectDTO>>(userProject);
-            foreach (var item in userProjectDTO)
-            {
-                User user = await _unitOfWork.Users.GetAsync(u => u.Id == item.UserId.ToString());
-                UserProjectRoleDTO userDTO = _mapper.Map<UserProjectRoleDTO>(user);
-                userDTO.Role = item.Role;
-                projectDTO.Users.Add(userDTO);
-            }
-
-
-            _response.StatusCode = HttpStatusCode.OK;
-            _response.Result = projectDTO;
-            return Ok(_response);
-        }
-        catch (Exception ex)
-        {
-            _response.StatusCode = HttpStatusCode.Unauthorized;
-            _response.IsSuccess = false;
-            _response.Messages = new List<string> { ex.ToString() };
-        }
-        return StatusCode(StatusCodes.Status500InternalServerError, _response);
-    }
-
-    /// <summary>
-    ///  EndPoint <c>CreateProject<\c> Creates a project and assigns the creator as the owner of the project
-    /// </summary>
-    /// <param name="createProjectDTO"></param>
-    /// <returns></returns>
-    [HttpPost]
-    [ProducesResponseType(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<APIResponse>> CreateProject([FromBody] CreateProjectDTO createProjectDTO)
-    {
-        try
-        {
-            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
-            if (loggedUser == null)
-            {
-                _response.Messages.Add("You are not logged in.");
-                _response.IsSuccess = false;
-                _response.StatusCode = HttpStatusCode.Unauthorized;
-                return Unauthorized(_response);
-            }
-
-            if (!ModelState.IsValid)
-            {
-                _response.Messages.Add("Your request needs to have a name and a address.");
-                _response.IsSuccess = false;
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                return BadRequest(_response);
-            }
-
-
-            Address newAddress = new()
-            {
-                State = createProjectDTO.Address.State,
-                Street = createProjectDTO.Address.Street,
-                City = createProjectDTO.Address.City,
-                ZipCode = createProjectDTO.Address.ZipCode,
-                Country = createProjectDTO.Address.Country,
-            };
-
-            Project newProject = new()
-            {
-                Name = createProjectDTO.Name,
-                Address = newAddress,
-                AddressId = newAddress.Id
-            };
-
-            await _unitOfWork.Addresses.CreateAsync(newAddress);
-            await _unitOfWork.Projects.CreateAsync(newProject);
-
-            // add the user to the project
-            UserProject newUserProject = new()
-            {
-                CreatedDate = DateTime.UtcNow,
-                UserId = loggedUser.Id,
-                ProjectId = newProject.Id,
-                Role = "owner"
-            };
-
-            await _unitOfWork.UsersProjects.CreateAsync(newUserProject);
-
-
-            ProjectDTO projectDTO = _mapper.Map<ProjectDTO>(newProject);
-
-            _response.StatusCode = HttpStatusCode.Created;
-            _response.Messages.Add("The Project was created with success");
-            _response.Result = projectDTO;
-
-            return CreatedAtRoute("GetProjectById", new { id = newProject.Id }, _response);
-        }
-        catch (Exception ex)
-        {
-            _response.StatusCode = HttpStatusCode.Unauthorized;
-            _response.IsSuccess = false;
-            _response.Messages = new List<string> { ex.ToString() };
-        }
-        return StatusCode(StatusCodes.Status500InternalServerError, _response);
-    }
-
-
-    /// <summary>
-    /// EndPoint <c>DeleteProject<\c> Delete the project if the user is the owner
-    /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [HttpDelete("{id:guid}", Name = "DeleteProject")]
-    public async Task<ActionResult<APIResponse>> DeleteProject(Guid id)
-    {
-        try
-        {
-            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
-            if (loggedUser == null)
-            {
-                _response.Messages.Add("You are not logged in.");
-                _response.IsSuccess = false;
-                _response.StatusCode = HttpStatusCode.Unauthorized;
-                return Unauthorized(_response);
-            }
-
-
-
-            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == id);
-            if (project == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                _response.IsSuccess = false;
-                _response.Messages!.Add("The project with ID was not found");
-                return NotFound(_response);
-            }
-
-            var projectUsers = await _unitOfWork.UsersProjects.GetAllAsync(r => r.ProjectId == project.Id);
-            var userPermission = projectUsers.FirstOrDefault(u => u.UserId == loggedUser.Id);
-            if (userPermission == null || userPermission.Role != "owner")
-            {
-                _response.Messages.Add("You are not the owner of the project");
-                _response.IsSuccess = false;
-                _response.StatusCode = HttpStatusCode.Forbidden;
-                return StatusCode(StatusCodes.Status403Forbidden, _response);
-            }
-
-            // remove address
-            project.Address = await _unitOfWork.Addresses.GetAsync(u => u.Id == project.AddressId, false);
-            await _unitOfWork.Projects.RemoveAsync(project);
-            await _unitOfWork.Addresses.RemoveAsync(project.Address);
-
-            _response.StatusCode = HttpStatusCode.NoContent;
-            _response.Messages.Add("The Project was deleted");
-            _response.IsSuccess = true;
-            return Ok(_response);
-        }
-        catch (Exception ex)
-        {
-            _response.StatusCode = HttpStatusCode.Unauthorized;
-            _response.IsSuccess = false;
-            _response.Messages = new List<string> { ex.ToString() };
-        }
-        return StatusCode(StatusCodes.Status500InternalServerError, _response);
-    }
-
-
-    // [HttpPatch("{id:guid}", Name = "UpdatePartialProject")]
-    // [ProducesResponseType(StatusCodes.Status204NoContent)]
-    // [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    // public async Task<ActionResult<APIResponse>> UpdatePartialProject(Guid id, JsonPatchDocument<UpdateProjectDTO> patchDTO)
-    // {
-    //     try
-    //     {
-
-    //         if (id == Guid.Empty)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.BadRequest;
-    //             _response.Messages!.Add("The Id is invalid");
-    //             _response.IsSuccess = false;
-    //             return BadRequest(_response);
-    //         }
-    //         var project = await _unitOfWork.Projects.GetAsync(u => u.Id == id, false);
-
-    //         if (project == null)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.BadRequest;
-    //             _response.Messages!.Add("The project doesn't exists");
-    //             _response.IsSuccess = false;
-    //             return BadRequest(_response);
-    //         }
-
-    //         UpdateProjectDTO projectDTO = _mapper.Map<UpdateProjectDTO>(project);
-
-    //         patchDTO.ApplyTo(projectDTO, ModelState);
-
-    //         Project model = _mapper.Map<Project>(projectDTO);
-
-
-
-    //         if (patchDTO.Operations[0].path == "/address")
-    //         {
-    //             Address address = new()
-    //             {
-    //                 Id = model.AddressId,
-    //                 State = model.Address.State,
-    //                 Street = model.Address.Street,
-    //                 City = model.Address.City,
-    //                 ZipCode = model.Address.ZipCode,
-    //                 Country = model.Address.Country,
-    //             };
-    //             await _unitOfWork.Addresses.UpdateAsync(address);
-
-    //         }
-    //         else
-    //         {
-    //             model.Address = await _unitOfWork.Addresses.GetAsync(u => u.Id == model.AddressId, false);
-    //             await _unitOfWork.Projects.UpdateAsync(model);
-    //         }
-
-
-    //         if (!ModelState.IsValid)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.BadRequest;
-    //             _response.IsSuccess = false;
-    //             return BadRequest(_response);
-    //         }
-    //         _response.StatusCode = HttpStatusCode.NoContent;
-    //         _response.Messages!.Add("The patch was applied with success");
-    //         _response.IsSuccess = true;
-    //         return Ok(_response);
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         _response.StatusCode = HttpStatusCode.InternalServerError;
-    //         _response.IsSuccess = false;
-    //         _response.Messages = new List<string> { ex.ToString() };
-    //     }
-    //     return _response;
-    // }
 
     /// <summary>
     /// Generate a random password for the new user
