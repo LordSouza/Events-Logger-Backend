@@ -2,12 +2,12 @@ using AutoMapper;
 using EventsLogger.BlobService.Repositories.Interfaces;
 using EventsLogger.DataService.Repositories.Interfaces;
 using EventsLogger.Entities.DbSet;
-using EventsLogger.Entities.Dtos.Requests;
+using EventsLogger.Entities.Dtos.Requests.Project;
+using EventsLogger.Entities.Dtos.Requests.UserProject;
 using EventsLogger.Entities.Dtos.Response;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 
@@ -15,6 +15,7 @@ namespace EventsLogger.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class ProjectController : BaseController
 {
     private readonly APIResponse _response;
@@ -33,9 +34,12 @@ public class ProjectController : BaseController
         _response = new();
     }
 
+    /// <summary>
+    /// EndPoint <c>GetProjects<\c> Get all projects that the user is part of
+    /// </summary>
+    /// <returns></returns>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> GetProjects()
     {
         try
@@ -68,10 +72,102 @@ public class ProjectController : BaseController
         return _response;
     }
 
-    [HttpPost("Users/add", Name = "AddUser")]
+
+    /// <summary>
+    /// EndPoint <c>AddNewUser<\c> add a new user to the project with a role
+    /// </summary>
+    /// <param name="CreateNewUserProjectDTO"></param>
+    /// <returns></returns>
+    [HttpPost("Users/New", Name = "AddNewUser")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    public async Task<ActionResult<APIResponse>> AddNewUser([FromBody] CreateNewUserProjectDTO CreateNewUserProjectDTO)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
+            }
+
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+
+
+            var project = await _unitOfWork.Projects.GetAsync(u => u.Id == CreateNewUserProjectDTO.ProjectId);
+            if (project == null)
+            {
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+
+
+            List<UserProject> userProject = await _unitOfWork.UsersProjects.GetAllAsync(u => u.ProjectId == project.Id);
+            var loggedUserRole = userProject.FirstOrDefault(u => u.UserId == loggedUser.Id);
+            // user with role worker in a project can't add others
+            if (loggedUserRole == null || loggedUserRole.Role == "worker")
+            {
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
+            }
+
+            var userExists = await _userManager.FindByEmailAsync(CreateNewUserProjectDTO.Email);
+            if (userExists != null)
+            {
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                _response.IsSuccess = false;
+                _response.Messages.Add("User with email already exists");
+                return BadRequest(_response);
+            }
+
+            var newUser = new User()
+            {
+                Id = Guid.NewGuid().ToString(),
+                Email = CreateNewUserProjectDTO.Email,
+                Name = CreateNewUserProjectDTO.FirstName + " " + CreateNewUserProjectDTO.LastName,
+                UserName = CreateNewUserProjectDTO.UserName ?? CreateNewUserProjectDTO.Email,
+                PhotoPath = CreateNewUserProjectDTO.PhotoPath ?? string.Empty,
+            };
+
+            await _userManager.CreateAsync(newUser, GeneratePassword());
+
+            UserProject relationship = new()
+            {
+                Role = CreateNewUserProjectDTO.Role,
+                Project = project,
+                ProjectId = project.Id,
+                User = newUser,
+                UserId = newUser.Id
+            };
+            await _unitOfWork.UsersProjects.CreateAsync(relationship);
+
+            _response.StatusCode = HttpStatusCode.Created;
+            _response.Result = _mapper.Map<UserProjectDTO>(relationship);
+
+            return Ok(_response);
+        }
+        catch (Exception ex)
+        {
+            _response.IsSuccess = false;
+            _response.Messages = new List<string> { ex.ToString() };
+        }
+        return _response;
+    }
+
+
+    /// <summary>
+    /// EndPoint <c>AddUser<\c> add a existing user to the project with a role
+    /// </summary>
+    /// <param name="createUserProjectDTO"></param>
+    /// <returns></returns>
+    [HttpPost("Users", Name = "AddUser")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<APIResponse>> AddUser([FromBody] CreateUserProjectDTO createUserProjectDTO)
     {
         try
@@ -104,8 +200,7 @@ public class ProjectController : BaseController
             }
             List<UserProject> userProject = await _unitOfWork.UsersProjects.GetAllAsync(u => u.ProjectId == project.Id);
             var loggedUserRole = userProject.FirstOrDefault(u => u.UserId == loggedUser.Id);
-            /// user with role "worker" can't remove others
-            /// unless he's removing him self
+            /// user with role "worker" can't add others
             if (loggedUserRole == null || loggedUserRole.Role == "worker")
             {
                 _response.StatusCode = HttpStatusCode.BadRequest;
@@ -140,10 +235,14 @@ public class ProjectController : BaseController
         return _response;
     }
 
-    [HttpDelete("Users/remove", Name = "RemoveUser")]
+    /// <summary>
+    /// EndPoint <c>RemoveUser<\c> remove a existing user from a project
+    /// </summary>
+    /// <param name="UserProjectDeleteDTO"></param>
+    /// <returns></returns>
+    [HttpDelete("Users", Name = "RemoveUser")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> RemoveUser([FromBody] UpdateUserProjectDTO UserProjectDeleteDTO)
     {
         try
@@ -206,11 +305,15 @@ public class ProjectController : BaseController
 
 
 
+    /// <summary>
+    /// EndPoint <c>GetProjectById<\c> get a project by his id
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
     [HttpGet("{id:guid}", Name = "GetProjectById")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> GetProject(Guid id)
     {
         try
@@ -262,12 +365,15 @@ public class ProjectController : BaseController
         return _response;
     }
 
-
+    /// <summary>
+    ///  EndPoint <c>CreateProject<\c> Creates a project and assigns the creator as the owner of the project
+    /// </summary>
+    /// <param name="createProjectDTO"></param>
+    /// <returns></returns>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> CreateProject([FromBody] CreateProjectDTO createProjectDTO)
     {
         try
@@ -346,6 +452,11 @@ public class ProjectController : BaseController
     }
 
 
+    /// <summary>
+    /// EndPoint <c>DeleteProject<\c> Delete the project if the user is the owner
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -473,5 +584,33 @@ public class ProjectController : BaseController
     //     }
     //     return _response;
     // }
+
+    /// <summary>
+    /// Generate a random password for the new user
+    /// </summary>
+    /// <returns></returns>
+    [NonAction]
+    private string GeneratePassword()
+    {
+        Random res = new Random();
+
+        // String of alphabets  
+        string alphabet = "abcdefghijklmnopqrstuvwxyz";
+        int size = 10;
+
+        // Initializing the empty string 
+        string newPass = "";
+
+        for (int i = 0; i < size; i++)
+        {
+            // Selecting a index randomly 
+            int x = res.Next(26);
+
+            // Appending the character at the  
+            // index to the random string. 
+            newPass += alphabet[x];
+        }
+        return newPass;
+    }
 
 }
