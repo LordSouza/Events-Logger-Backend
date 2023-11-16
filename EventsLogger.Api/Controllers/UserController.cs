@@ -3,7 +3,7 @@ using AutoMapper;
 using EventsLogger.BlobService.Repositories.Interfaces;
 using EventsLogger.DataService.Repositories.Interfaces;
 using EventsLogger.Entities.DbSet;
-using EventsLogger.Entities.Dtos.Requests;
+using EventsLogger.Entities.Dtos.Requests.User;
 using EventsLogger.Entities.Dtos.Response;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;

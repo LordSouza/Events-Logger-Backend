@@ -1,6 +1,8 @@
 using AutoMapper;
 using EventsLogger.Entities.DbSet;
-using EventsLogger.Entities.Dtos.Requests;
+using EventsLogger.Entities.Dtos.Requests.Project;
+using EventsLogger.Entities.Dtos.Requests.User;
+using EventsLogger.Entities.Dtos.Requests.UserProject;
 
 namespace EventsLogger.Api.MappingProfiles;
 
