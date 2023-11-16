@@ -1,5 +1,6 @@
 using System.Net;
 using AutoMapper;
+using AutoMapper.Configuration.Annotations;
 using EventsLogger.BlobService.Repositories.Interfaces;
 using EventsLogger.DataService.Repositories.Interfaces;
 using EventsLogger.Entities.DbSet;
@@ -176,7 +177,11 @@ public class UserController : BaseController
 
             loggedUser.Name = updateUserDTO.FirstName + " " + updateUserDTO.LastName ?? loggedUser.Name;
             loggedUser.Email = updateUserDTO.Email ?? loggedUser.Email;
-            loggedUser.PhotoPath = updateUserDTO.PhotoPath ?? loggedUser.PhotoPath;
+            if (updateUserDTO.File != null)
+            {
+                var photoPath = await UploadFile(updateUserDTO.File);
+                loggedUser.PhotoPath = photoPath;
+            }
 
             if (updateUserDTO.Password != null && updateUserDTO.NewPassword != null)
             {

@@ -15,6 +15,7 @@ namespace EventsLogger.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class EntryController : BaseController
 {
     private readonly APIResponse _response;
@@ -36,7 +37,6 @@ public class EntryController : BaseController
 
     [HttpGet("all")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> GetEntries(
         [FromQuery] Guid? projectid,
         [FromQuery] string? userid,
@@ -107,7 +107,6 @@ public class EntryController : BaseController
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> GetEntry(Guid id)
     {
         try
@@ -147,7 +146,6 @@ public class EntryController : BaseController
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> CreateEntry([FromForm] CreateEntryDTO createEntryDTO)
     {
         try
@@ -217,7 +215,6 @@ public class EntryController : BaseController
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [HttpDelete("{id:guid}", Name = "DeleteEntry")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> DeleteEntry(Guid id)
     {
         try
