@@ -46,6 +46,8 @@ public class EntryController : BaseController
     /// <returns></returns>
     [HttpGet("all")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<APIResponse>> GetEntries(
         [FromQuery(Name = "ProjectId")] Guid? projectid,
         [FromQuery(Name = "UserId")] string? userid,
@@ -176,6 +178,8 @@ public class EntryController : BaseController
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<APIResponse>> CreateEntry([FromForm] CreateEntryDTO createEntryDTO)
     {
@@ -293,7 +297,7 @@ public class EntryController : BaseController
             await _unitOfWork.Entries.RemoveAsync(entryToDelete);
 
             _response.Messages.Add("Entry deleted with success.");
-            _response.StatusCode = HttpStatusCode.NoContent;
+            _response.StatusCode = HttpStatusCode.OK;
             _response.IsSuccess = true;
             return Ok(_response);
         }
@@ -313,9 +317,10 @@ public class EntryController : BaseController
     /// <param name="updateDTO"></param>
     /// <returns></returns>
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [HttpPut("{id:guid}", Name = "UpdateEntry")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> UpdateEntry(Guid id, [FromForm] UpdateEntryDTO updateDTO)
     {
         try
@@ -352,7 +357,7 @@ public class EntryController : BaseController
             _response.Messages.Add("Entry update was successful.");
             _response.StatusCode = HttpStatusCode.NoContent;
             _response.IsSuccess = true;
-            return Ok(_response);
+            return StatusCode(StatusCodes.Status204NoContent, _response);
         }
         catch (Exception ex)
         {
