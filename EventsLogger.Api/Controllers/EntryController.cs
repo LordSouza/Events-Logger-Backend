@@ -53,7 +53,11 @@ public class EntryController : BaseController
         [FromQuery(Name = "UserId")] string? userid,
         [FromQuery(Name = "DatStart")] string? datestart,
         [FromQuery(Name = "DateEnd")] string? dateend,
-        [FromQuery(Name = "HasFiles")] bool? hasfiles)
+        [FromQuery(Name = "HasFiles")] bool? hasfiles,
+        [FromQuery(Name = "UserName")] string? username,
+        [FromQuery(Name = "ProjectName")] string? projectname,
+        [FromQuery(Name = "EntryDescription")] string? entrydescription
+        )
     {
         try
         {
@@ -77,6 +81,23 @@ public class EntryController : BaseController
                 EntryList.AddRange(await _unitOfWork.Entries.GetAllAsync(u => u.UserId == loggedUser.Id, includeProperties: "User,Project"));
             }
             IEnumerable<Entry> EntryListFiler = EntryList.AsEnumerable();
+
+            if (entrydescription != null)
+            {
+                EntryListFiler = EntryListFiler.Where(u => u.Description.Contains(entrydescription));
+            }
+
+            if (username != null)
+            {
+                EntryListFiler = EntryListFiler.Where(u => u.User.Name.Contains(username));
+            }
+
+            if (projectname != null)
+            {
+                EntryListFiler = EntryListFiler.Where(u => u.Project.Name.Contains(projectname));
+            }
+
+
 
             if (userid != null)
             {
