@@ -101,14 +101,6 @@ public class ProjectController : BaseController
                 return Unauthorized(_response);
             }
 
-            if (!ModelState.IsValid)
-            {
-                _response.Messages.Add("Your request needs to have a Id.");
-                _response.IsSuccess = false;
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                return BadRequest(_response);
-            }
-
 
             var project = await _unitOfWork.Projects.GetAsync(u => u.Id == id, includeProperties: "Address");
 
@@ -247,14 +239,12 @@ public class ProjectController : BaseController
                 return Unauthorized(_response);
             }
 
-
-
             var project = await _unitOfWork.Projects.GetAsync(u => u.Id == id);
             if (project == null)
             {
                 _response.StatusCode = HttpStatusCode.NotFound;
                 _response.IsSuccess = false;
-                _response.Messages!.Add("The project with ID was not found");
+                _response.Messages!.Add($"Project with {id} was not found");
                 return NotFound(_response);
             }
 
