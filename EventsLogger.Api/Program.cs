@@ -47,8 +47,14 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+
 builder.Services.AddDefaultIdentity<User>(options =>
 {
+    options.Password.RequiredLength = 8;
+    options.Password.RequireDigit = false;
+    options.Password.RequireLowercase = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireNonAlphanumeric = false;
     options.SignIn.RequireConfirmedAccount = false;
 }).AddEntityFrameworkStores<AppDbContext>();
 
@@ -66,12 +72,8 @@ builder.Services.AddCors(options =>
                       });
 });
 
-// Add services to the container.
 
-builder.Services.AddControllers(options =>
-{
-    options.SuppressAsyncSuffixInActionNames = false;
-}).AddNewtonsoftJson();
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

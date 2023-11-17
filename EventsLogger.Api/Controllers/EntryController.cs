@@ -2,7 +2,7 @@ using AutoMapper;
 using EventsLogger.BlobService.Repositories.Interfaces;
 using EventsLogger.DataService.Repositories.Interfaces;
 using EventsLogger.Entities.DbSet;
-using EventsLogger.Entities.Dtos.Requests;
+using EventsLogger.Entities.Dtos.Requests.Entry;
 using EventsLogger.Entities.Dtos.Response;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -15,6 +15,7 @@ namespace EventsLogger.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class EntryController : BaseController
 {
     private readonly APIResponse _response;
@@ -36,70 +37,75 @@ public class EntryController : BaseController
 
     [HttpGet("all")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> GetEntries(
-        [FromQuery] Guid? projectid,
-        [FromQuery] string? userid,
-        [FromQuery(Name = "DateStart")] string? datestart,
-        [FromQuery(Name = "DateEnd")] string? dateend)
+        [FromQuery(Name = "ProjectId")] Guid? projectid,
+        [FromQuery(Name = "UserId")] string? userid,
+        [FromQuery(Name = "DatStart")] string? datestart,
+        [FromQuery(Name = "DateEnd")] string? dateend,
+        [FromQuery(Name = "HasFiles")] bool? hasfiles)
     {
         try
         {
-            if (!ModelState.IsValid)
-            {
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                return BadRequest(_response);
-            }
 
             var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
             if (loggedUser == null)
             {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
-
-            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
-            if (profile == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
-            IEnumerable<Entry> EntryList;
-            if (userid != null && projectid == null)
-            {
-                EntryList = await _unitOfWork.Entries.GetAllAsync(u => u.UserId == userid, includeProperties: "User,Project");
-                _response.Result = _mapper.Map<List<EntryDTO>>(EntryList);
-                _response.StatusCode = HttpStatusCode.OK;
-                return Ok(_response);
+                _response.Messages.Add("You are not logged in.");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.Unauthorized;
+                return Unauthorized(_response);
             }
 
 
-            if (userid == null && projectid != null)
+            List<UserProject> projectList = await _unitOfWork.UsersProjects.GetAllAsync(u => u.UserId == loggedUser.Id);
+
+            List<Entry> EntryList = new();
+
+            foreach (var project in projectList)
             {
-                EntryList = await _unitOfWork.Entries.GetAllAsync(u => u.ProjectId == projectid, includeProperties: "User,Project");
-                _response.Result = _mapper.Map<List<EntryDTO>>(EntryList);
-                _response.StatusCode = HttpStatusCode.OK;
-                return Ok(_response);
+                EntryList.AddRange(await _unitOfWork.Entries.GetAllAsync(u => u.UserId == loggedUser.Id, includeProperties: "User,Project"));
+            }
+            IEnumerable<Entry> EntryListFiler = EntryList.AsEnumerable();
+
+            if (userid != null)
+            {
+                EntryListFiler = EntryListFiler.Where(u => u.UserId == userid);
             }
 
-            if (userid != null && projectid != null)
+
+            if (projectid != null)
             {
-                EntryList = await _unitOfWork.Entries.GetAllAsync(u => u.UserId == userid && u.ProjectId == projectid, includeProperties: "User,Project");
-                _response.Result = _mapper.Map<List<EntryDTO>>(EntryList);
-                _response.StatusCode = HttpStatusCode.OK;
-                return Ok(_response);
+                EntryListFiler = EntryListFiler.Where(u => u.ProjectId == projectid);
             }
-            EntryList = await _unitOfWork.Entries.GetAllAsync(includeProperties: "User,Project");
-            _response.Result = _mapper.Map<List<EntryDTO>>(EntryList);
+
+            if (datestart != null)
+            {
+                var datestartfilter = DateTime.Parse(datestart);
+                EntryListFiler = EntryListFiler.Where(u => u.CreatedDate > datestartfilter);
+            }
+            if (dateend != null)
+            {
+                var dateendfilter = DateTime.Parse(dateend);
+                EntryListFiler = EntryListFiler.Where(u => u.CreatedDate < dateendfilter);
+            }
+            if (hasfiles != null)
+            {
+                EntryListFiler = EntryListFiler.Where(u => u.FilesUrl.Count > 0);
+            }
+
+            EntryListFiler = EntryListFiler.OrderByDescending(u => u.CreatedDate);
+
+            _response.Result = _mapper.Map<IEnumerable<EntryDTO>>(EntryListFiler);
             _response.StatusCode = HttpStatusCode.OK;
             return Ok(_response);
         }
         catch (Exception ex)
         {
+            _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
-        return _response;
+        return StatusCode(StatusCodes.Status500InternalServerError, _response);
     }
 
 
@@ -107,47 +113,56 @@ public class EntryController : BaseController
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> GetEntry(Guid id)
     {
         try
         {
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.Messages.Add("You are not logged in");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.Unauthorized;
+                return Unauthorized(_response);
+            }
+
             if (!ModelState.IsValid)
             {
+                _response.Messages.Add("Your request needs to have a Id.");
+                _response.IsSuccess = false;
                 _response.StatusCode = HttpStatusCode.BadRequest;
                 return BadRequest(_response);
             }
 
-            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
-            if (loggedUser == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
+
 
             var Entry = await _unitOfWork.Entries.GetAsync(u => u.Id == id, includeProperties: "User,Project");
             if (Entry == null)
             {
+                _response.Messages.Add("There is no entry with this Id.");
+                _response.IsSuccess = false;
                 _response.StatusCode = HttpStatusCode.NotFound;
                 return NotFound(_response);
             }
+
+
             _response.StatusCode = HttpStatusCode.OK;
             _response.Result = _mapper.Map<EntryDTO>(Entry);
             return Ok(_response);
         }
         catch (Exception ex)
         {
+            _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
-        return _response;
+        return StatusCode(StatusCodes.Status500InternalServerError, _response);
     }
 
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> CreateEntry([FromForm] CreateEntryDTO createEntryDTO)
     {
         try
@@ -217,7 +232,6 @@ public class EntryController : BaseController
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [HttpDelete("{id:guid}", Name = "DeleteEntry")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> DeleteEntry(Guid id)
     {
         try

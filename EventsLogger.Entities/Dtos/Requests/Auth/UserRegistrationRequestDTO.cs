@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace EventsLogger.Entities.Dtos.Requests;
+namespace EventsLogger.Entities.Dtos.Requests.Auth;
 
 public class UserRegistrationRequestDTO
 {

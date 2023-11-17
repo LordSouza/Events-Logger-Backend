@@ -1,6 +1,6 @@
-﻿namespace EventsLogger.Entities.Dtos.Requests;
+﻿namespace EventsLogger.Entities.Dtos.Requests.UserProject;
 
-public class UpdateUserProjectDTO
+public class RemoveUserProjectDTO
 {
     public required Guid ProjectId { get; init; }
     public required string UserId { get; init; }

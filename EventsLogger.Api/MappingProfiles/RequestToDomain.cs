@@ -1,6 +1,8 @@
 using AutoMapper;
 using EventsLogger.Entities.DbSet;
-using EventsLogger.Entities.Dtos.Requests;
+using EventsLogger.Entities.Dtos.Requests.Project;
+using EventsLogger.Entities.Dtos.Requests.User;
+using EventsLogger.Entities.Dtos.Requests.UserProject;
 
 namespace EventsLogger.Api.MappingProfiles;
 
@@ -117,7 +119,7 @@ public class RequestToDomain : Profile
             des => des.UpdatedDate,
             opt => opt.MapFrom(src => DateTime.UtcNow));
 
-        CreateMap<UpdateUserProjectDTO, UserProject>()
+        CreateMap<RemoveUserProjectDTO, UserProject>()
         .ForMember(
             dest => dest.Id,
             opt => opt.Ignore())

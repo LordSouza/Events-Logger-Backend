@@ -1,4 +1,4 @@
-﻿namespace EventsLogger.Entities.Dtos.Requests;
+﻿namespace EventsLogger.Entities.Dtos.Requests.Project;
 
 public class CreateProjectDTO
 {

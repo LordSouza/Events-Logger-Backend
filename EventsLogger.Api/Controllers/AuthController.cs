@@ -3,7 +3,7 @@ using EventsLogger.Api.Configuration;
 using EventsLogger.BlobService.Repositories.Interfaces;
 using EventsLogger.DataService.Repositories.Interfaces;
 using EventsLogger.Entities.DbSet;
-using EventsLogger.Entities.Dtos.Requests;
+using EventsLogger.Entities.Dtos.Requests.Auth;
 using EventsLogger.Entities.Dtos.Response;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
