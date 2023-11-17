@@ -38,58 +38,64 @@ public class EntryController : BaseController
     [HttpGet("all")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<APIResponse>> GetEntries(
-        [FromQuery] Guid? projectid,
-        [FromQuery] string? userid,
-        [FromQuery(Name = "DateStart")] string? datestart,
-        [FromQuery(Name = "DateEnd")] string? dateend)
+        [FromQuery(Name = "ProjectId")] Guid? projectid,
+        [FromQuery(Name = "UserId")] string? userid,
+        [FromQuery(Name = "DatStart")] string? datestart,
+        [FromQuery(Name = "DateEnd")] string? dateend,
+        [FromQuery(Name = "HasFiles")] bool? hasfiles)
     {
         try
         {
-            if (!ModelState.IsValid)
-            {
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                return BadRequest(_response);
-            }
 
             var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
             if (loggedUser == null)
             {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
-
-            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
-            if (profile == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
-            IEnumerable<Entry> EntryList;
-            if (userid != null && projectid == null)
-            {
-                EntryList = await _unitOfWork.Entries.GetAllAsync(u => u.UserId == userid, includeProperties: "User,Project");
-                _response.Result = _mapper.Map<List<EntryDTO>>(EntryList);
-                _response.StatusCode = HttpStatusCode.OK;
-                return Ok(_response);
+                _response.Messages.Add("You are not logged in.");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.Unauthorized;
+                return Unauthorized(_response);
             }
 
 
-            if (userid == null && projectid != null)
+            List<UserProject> projectList = await _unitOfWork.UsersProjects.GetAllAsync(u => u.UserId == loggedUser.Id);
+
+            List<Entry> EntryList = new();
+
+            foreach (var project in projectList)
             {
-                EntryList = await _unitOfWork.Entries.GetAllAsync(u => u.ProjectId == projectid, includeProperties: "User,Project");
-                _response.Result = _mapper.Map<List<EntryDTO>>(EntryList);
-                _response.StatusCode = HttpStatusCode.OK;
-                return Ok(_response);
+                EntryList.AddRange(await _unitOfWork.Entries.GetAllAsync(u => u.UserId == userid, includeProperties: "User,Project"));
             }
 
-            if (userid != null && projectid != null)
+            IEnumerable<Entry> EntryListFiler = EntryList.AsEnumerable();
+
+            if (userid != null)
             {
-                EntryList = await _unitOfWork.Entries.GetAllAsync(u => u.UserId == userid && u.ProjectId == projectid, includeProperties: "User,Project");
-                _response.Result = _mapper.Map<List<EntryDTO>>(EntryList);
-                _response.StatusCode = HttpStatusCode.OK;
-                return Ok(_response);
+                EntryListFiler = EntryListFiler.Where(u => u.UserId == userid);
             }
-            EntryList = await _unitOfWork.Entries.GetAllAsync(includeProperties: "User,Project");
+
+
+            if (projectid != null)
+            {
+                EntryListFiler = EntryListFiler.Where(u => u.ProjectId == projectid);
+            }
+
+            if (datestart != null)
+            {
+                var datestartfilter = DateTime.Parse(datestart);
+                EntryListFiler = EntryListFiler.Where(u => u.CreatedDate > datestartfilter);
+            }
+            if (dateend != null)
+            {
+                var dateendfilter = DateTime.Parse(dateend);
+                EntryListFiler = EntryListFiler.Where(u => u.CreatedDate < dateendfilter);
+            }
+            if (hasfiles != null)
+            {
+                EntryListFiler = EntryListFiler.Where(u => u.FilesUrl.Count == 0);
+            }
+
+            EntryListFiler = EntryListFiler.OrderByDescending(u => u.CreatedDate);
+
             _response.Result = _mapper.Map<List<EntryDTO>>(EntryList);
             _response.StatusCode = HttpStatusCode.OK;
             return Ok(_response);
