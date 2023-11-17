@@ -63,9 +63,8 @@ public class EntryController : BaseController
 
             foreach (var project in projectList)
             {
-                EntryList.AddRange(await _unitOfWork.Entries.GetAllAsync(u => u.UserId == userid, includeProperties: "User,Project"));
+                EntryList.AddRange(await _unitOfWork.Entries.GetAllAsync(u => u.UserId == loggedUser.Id, includeProperties: "User,Project"));
             }
-
             IEnumerable<Entry> EntryListFiler = EntryList.AsEnumerable();
 
             if (userid != null)
@@ -91,21 +90,22 @@ public class EntryController : BaseController
             }
             if (hasfiles != null)
             {
-                EntryListFiler = EntryListFiler.Where(u => u.FilesUrl.Count == 0);
+                EntryListFiler = EntryListFiler.Where(u => u.FilesUrl.Count > 0);
             }
 
             EntryListFiler = EntryListFiler.OrderByDescending(u => u.CreatedDate);
 
-            _response.Result = _mapper.Map<List<EntryDTO>>(EntryList);
+            _response.Result = _mapper.Map<IEnumerable<EntryDTO>>(EntryListFiler);
             _response.StatusCode = HttpStatusCode.OK;
             return Ok(_response);
         }
         catch (Exception ex)
         {
+            _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
-        return _response;
+        return StatusCode(StatusCodes.Status500InternalServerError, _response);
     }
 
 
@@ -117,35 +117,46 @@ public class EntryController : BaseController
     {
         try
         {
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.Messages.Add("You are not logged in");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.Unauthorized;
+                return Unauthorized(_response);
+            }
+
             if (!ModelState.IsValid)
             {
+                _response.Messages.Add("Your request needs to have a Id.");
+                _response.IsSuccess = false;
                 _response.StatusCode = HttpStatusCode.BadRequest;
                 return BadRequest(_response);
             }
 
-            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
-            if (loggedUser == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
+
 
             var Entry = await _unitOfWork.Entries.GetAsync(u => u.Id == id, includeProperties: "User,Project");
             if (Entry == null)
             {
+                _response.Messages.Add("There is no entry with this Id.");
+                _response.IsSuccess = false;
                 _response.StatusCode = HttpStatusCode.NotFound;
                 return NotFound(_response);
             }
+
+
             _response.StatusCode = HttpStatusCode.OK;
             _response.Result = _mapper.Map<EntryDTO>(Entry);
             return Ok(_response);
         }
         catch (Exception ex)
         {
+            _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
-        return _response;
+        return StatusCode(StatusCodes.Status500InternalServerError, _response);
     }
 
     [HttpPost]

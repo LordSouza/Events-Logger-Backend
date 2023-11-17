@@ -154,7 +154,7 @@ public class UserController : BaseController
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [HttpPut(Name = "UpdateUser")]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public async Task<ActionResult<APIResponse>> UpdateUser([FromBody] UpdateUserDTO updateUserDTO)
+    public async Task<ActionResult<APIResponse>> UpdateUser([FromForm] UpdateUserDTO updateUserDTO)
     {
         try
         {
