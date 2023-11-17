@@ -7,7 +7,6 @@ using EventsLogger.Entities.Dtos.Response;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 
@@ -35,6 +34,16 @@ public class EntryController : BaseController
     }
 
 
+    /// <summary>
+    /// Get all entries that is part of the project the user is also part of
+    /// this request has filtering capabilities
+    /// </summary>
+    /// <param name="projectid"></param>
+    /// <param name="userid"></param>
+    /// <param name="datestart"></param>
+    /// <param name="dateend"></param>
+    /// <param name="hasfiles"></param>
+    /// <returns></returns>
     [HttpGet("all")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<APIResponse>> GetEntries(
@@ -97,6 +106,7 @@ public class EntryController : BaseController
 
             _response.Result = _mapper.Map<IEnumerable<EntryDTO>>(EntryListFiler);
             _response.StatusCode = HttpStatusCode.OK;
+            _response.Messages.Add("Success.");
             return Ok(_response);
         }
         catch (Exception ex)
@@ -109,10 +119,16 @@ public class EntryController : BaseController
     }
 
 
+    /// <summary>
+    /// get entry with a id as parameter
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
     [HttpGet("{id:guid}", Name = "GetEntry")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<APIResponse>> GetEntry(Guid id)
     {
         try
@@ -124,14 +140,6 @@ public class EntryController : BaseController
                 _response.IsSuccess = false;
                 _response.StatusCode = HttpStatusCode.Unauthorized;
                 return Unauthorized(_response);
-            }
-
-            if (!ModelState.IsValid)
-            {
-                _response.Messages.Add("Your request needs to have a Id.");
-                _response.IsSuccess = false;
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                return BadRequest(_response);
             }
 
 
@@ -148,6 +156,7 @@ public class EntryController : BaseController
 
             _response.StatusCode = HttpStatusCode.OK;
             _response.Result = _mapper.Map<EntryDTO>(Entry);
+            _response.Messages.Add("Success.");
             return Ok(_response);
         }
         catch (Exception ex)
@@ -159,6 +168,11 @@ public class EntryController : BaseController
         return StatusCode(StatusCodes.Status500InternalServerError, _response);
     }
 
+    /// <summary>
+    /// Create a entry with the id of the user that made the request
+    /// </summary>
+    /// <param name="createEntryDTO"></param>
+    /// <returns></returns>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -168,44 +182,47 @@ public class EntryController : BaseController
         try
         {
 
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.Messages.Add("You are not logged in.");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.Unauthorized;
+                return Unauthorized(_response);
+            }
+
             if (!ModelState.IsValid)
             {
+                _response.Messages.Add("Your request is missing one or more parameter.");
+                _response.IsSuccess = false;
                 _response.StatusCode = HttpStatusCode.BadRequest;
                 return BadRequest(_response);
             }
 
-            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
-            if (loggedUser == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
 
-            var profile = await _unitOfWork.Users.GetAsync(u => u.Id == loggedUser.Id);
-            if (profile == null)
-            {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
-            }
             Project projectModel = await _unitOfWork.Projects.GetAsync(u => u.Id == createEntryDTO.ProjectId);
 
             if (projectModel == null)
             {
+                _response.Messages.Add("There is no project with this Id.");
+                _response.IsSuccess = false;
                 _response.StatusCode = HttpStatusCode.NotFound;
                 return NotFound(_response);
             }
 
             List<string> filesUrl = new();
-
-            foreach (var file in createEntryDTO.Files)
+            if (createEntryDTO.Files != null)
             {
-                var url = await UploadFile(file);
-                filesUrl.Add(url);
+                foreach (var file in createEntryDTO.Files)
+                {
+                    var url = await UploadFile(file);
+                    filesUrl.Add(url);
+                }
             }
             Entry newEntry = new()
             {
-                UserId = profile.Id,
-                User = profile,
+                UserId = loggedUser.Id,
+                User = loggedUser,
                 ProjectId = createEntryDTO.ProjectId,
                 Project = projectModel,
                 Description = createEntryDTO.Description,
@@ -214,20 +231,27 @@ public class EntryController : BaseController
 
             await _unitOfWork.Entries.CreateAsync(newEntry);
 
+            _response.Messages.Add("Created entry with success.");
             _response.StatusCode = HttpStatusCode.Created;
             _response.Result = _mapper.Map<EntryDTO>(newEntry);
 
-            return Ok(_response);
+            return StatusCode(StatusCodes.Status201Created, _response);
         }
         catch (Exception ex)
         {
+            _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
-        return _response;
+        return StatusCode(StatusCodes.Status500InternalServerError, _response);
     }
 
 
+    /// <summary>
+    /// Delete a entry the user has posted
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -236,17 +260,14 @@ public class EntryController : BaseController
     {
         try
         {
-            if (!ModelState.IsValid)
-            {
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                return BadRequest(_response);
-            }
 
             var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
             if (loggedUser == null)
             {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                return NotFound(_response);
+                _response.Messages.Add("You are not logged in.");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.Unauthorized;
+                return Unauthorized(_response);
             }
 
 
@@ -255,99 +276,92 @@ public class EntryController : BaseController
             if (entryToDelete == null)
             {
                 _response.StatusCode = HttpStatusCode.NotFound;
+                _response.IsSuccess = false;
+                _response.Messages!.Add($"Entry with {id} was not found");
                 return NotFound(_response);
             }
 
             if (entryToDelete.UserId != loggedUser.Id)
             {
-                _response.StatusCode = HttpStatusCode.BadRequest;
-                return BadRequest(_response);
+                _response.Messages.Add("You are not the creator of the entry");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.Forbidden;
+                return StatusCode(StatusCodes.Status403Forbidden, _response);
             }
 
 
             await _unitOfWork.Entries.RemoveAsync(entryToDelete);
 
+            _response.Messages.Add("Entry deleted with success.");
             _response.StatusCode = HttpStatusCode.NoContent;
             _response.IsSuccess = true;
             return Ok(_response);
         }
         catch (Exception ex)
         {
+            _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
-        return _response;
+        return StatusCode(StatusCodes.Status500InternalServerError, _response);
     }
 
-    // [ProducesResponseType(StatusCodes.Status204NoContent)]
-    // [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    // [HttpPut("{id:guid}", Name = "UpdateEntry")]
-    // [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    // public async Task<ActionResult<APIResponse>> UpdateEntry(Guid id, [FromBody] UpdateEntryDTO updateDTO)
-    // {
-    //     try
-    //     {
+    /// <summary>
+    /// updated a entry the user has posted
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="updateDTO"></param>
+    /// <returns></returns>
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [HttpPut("{id:guid}", Name = "UpdateEntry")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    public async Task<ActionResult<APIResponse>> UpdateEntry(Guid id, [FromForm] UpdateEntryDTO updateDTO)
+    {
+        try
+        {
+            var loggedUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (loggedUser == null)
+            {
+                _response.Messages.Add("You are not logged in.");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.Unauthorized;
+                return Unauthorized(_response);
+            }
 
-    //         if (updateDTO == null || id != updateDTO.Id)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.BadRequest;
-    //             return BadRequest(_response);
-    //         }
-    //         Entry model = _mapper.Map<Entry>(updateDTO);
+            if (!ModelState.IsValid)
+            {
+                _response.Messages.Add("Your request is missing one or more parameter.");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.BadRequest;
+                return BadRequest(_response);
+            }
 
-    //         await _unitOfWork.Entries.UpdateAsync(model);
-    //         _response.StatusCode = HttpStatusCode.NoContent;
-    //         _response.IsSuccess = true;
-    //         return Ok(_response);
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         _response.IsSuccess = false;
-    //         _response.Messages = new List<string> { ex.ToString() };
-    //     }
-    //     return _response;
-    // }
+            var entryToChange = await _unitOfWork.Entries.GetAsync(u => u.Id == id);
 
-    // [HttpPatch(Name = "UpdatePartialEntry")]
-    // [ProducesResponseType(StatusCodes.Status204NoContent)]
-    // [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    // [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    // public async Task<ActionResult<APIResponse>> UpdatePartialEntry(Guid id, JsonPatchDocument<UpdateEntryDTO> patchDTO)
-    // {
-    //     try
-    //     {
+            if (entryToChange == null)
+            {
+                _response.Messages.Add($"Entry with {id} was not found");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.NotFound;
+                return NotFound(_response);
+            }
+            Entry model = _mapper.Map<Entry>(updateDTO);
 
-    //         var entry = await _unitOfWork.Entries.GetAsync(u => u.Id == id, false);
+            await _unitOfWork.Entries.UpdateAsync(model);
+            _response.Messages.Add("Entry update was successful.");
+            _response.StatusCode = HttpStatusCode.NoContent;
+            _response.IsSuccess = true;
+            return Ok(_response);
+        }
+        catch (Exception ex)
+        {
+            _response.StatusCode = HttpStatusCode.InternalServerError;
+            _response.IsSuccess = false;
+            _response.Messages = new List<string> { ex.ToString() };
+        }
+        return StatusCode(StatusCodes.Status500InternalServerError, _response);
+    }
 
-    //         if (entry is null)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.BadRequest;
-    //             return BadRequest(_response);
-    //         }
-    //         UpdateEntryDTO EntryDTO = _mapper.Map<UpdateEntryDTO>(entry);
-
-    //         patchDTO.ApplyTo(EntryDTO, ModelState);
-
-    //         Entry model = _mapper.Map<Entry>(EntryDTO);
-    //         model.UpdatedDate = DateTime.UtcNow;
-
-    //         await _unitOfWork.Entries.UpdateAsync(model);
-
-    //         if (!ModelState.IsValid)
-    //         {
-    //             _response.StatusCode = HttpStatusCode.BadRequest;
-    //             return BadRequest(_response);
-    //         }
-    //         _response.StatusCode = HttpStatusCode.NoContent;
-    //         _response.IsSuccess = true;
-    //         return Ok(_response);
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         _response.IsSuccess = false;
-    //         _response.Messages = new List<string> { ex.ToString() };
-    //     }
-    //     return _response;
-    // }
 
 }
