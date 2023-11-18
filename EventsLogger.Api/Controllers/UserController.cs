@@ -1,6 +1,5 @@
 using System.Net;
 using AutoMapper;
-using AutoMapper.Configuration.Annotations;
 using EventsLogger.BlobService.Repositories.Interfaces;
 using EventsLogger.DataService.Repositories.Interfaces;
 using EventsLogger.Entities.DbSet;
@@ -9,13 +8,13 @@ using EventsLogger.Entities.Dtos.Response;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventsLogger.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class UserController : BaseController
 {
     private readonly APIResponse _response;
@@ -46,7 +45,6 @@ public class UserController : BaseController
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> GetUsers([FromQuery(Name = "UserName")] string? username)
     {
         try
@@ -69,6 +67,7 @@ public class UserController : BaseController
             {
                 UserList = await _unitOfWork.Users.GetAllAsync();
             }
+            _response.Messages.Add("Success.");
             _response.Result = _mapper.Map<List<UserDTO>>(UserList);
             _response.StatusCode = HttpStatusCode.OK;
             return Ok(_response);
@@ -77,7 +76,7 @@ public class UserController : BaseController
         }
         catch (Exception ex)
         {
-            _response.StatusCode = HttpStatusCode.Unauthorized;
+            _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
@@ -92,11 +91,11 @@ public class UserController : BaseController
     /// </summary>
     /// <param name="userPasswordRequestDTO"></param>
     /// <returns></returns>
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [HttpDelete(Name = "DeleteUser")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> DeleteUser([FromBody] UserPasswordRequestDTO userPasswordRequestDTO)
     {
         try
@@ -131,13 +130,14 @@ public class UserController : BaseController
 
             await _unitOfWork.Users.RemoveAsync(loggedUser);
 
-            _response.StatusCode = HttpStatusCode.NoContent;
+            _response.Messages.Add("Success.");
+            _response.StatusCode = HttpStatusCode.OK;
             _response.IsSuccess = true;
             return Ok(_response);
         }
         catch (Exception ex)
         {
-            _response.StatusCode = HttpStatusCode.Unauthorized;
+            _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
@@ -151,9 +151,10 @@ public class UserController : BaseController
     /// <param name="updateUserDTO"></param>
     /// <returns></returns>
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [HttpPut(Name = "UpdateUser")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<APIResponse>> UpdateUser([FromForm] UpdateUserDTO updateUserDTO)
     {
         try
@@ -168,7 +169,7 @@ public class UserController : BaseController
             }
             if (!ModelState.IsValid)
             {
-                _response.Messages.Add("Your request needs to have a ProjectId, Role, FirstName, LastName, Email, and can have a Photo, and UserName");
+                _response.Messages.Add("Your request is missing one or more parameter.");
                 _response.IsSuccess = false;
                 _response.StatusCode = HttpStatusCode.BadRequest;
                 return BadRequest(_response);
@@ -190,13 +191,14 @@ public class UserController : BaseController
 
             await _userManager.UpdateAsync(loggedUser);
 
+            _response.Messages.Add("User updated with success.");
             _response.StatusCode = HttpStatusCode.NoContent;
             _response.IsSuccess = true;
-            return Ok(_response);
+            return StatusCode(StatusCodes.Status204NoContent, _response);
         }
         catch (Exception ex)
         {
-            _response.StatusCode = HttpStatusCode.Unauthorized;
+            _response.StatusCode = HttpStatusCode.InternalServerError;
             _response.IsSuccess = false;
             _response.Messages = new List<string> { ex.ToString() };
         }
