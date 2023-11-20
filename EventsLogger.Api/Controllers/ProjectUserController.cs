@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EventsLogger.Api.Controllers;
 
-[Route("api/[controller]")]
+[Route("api/Project/Entry")]
 [ApiController]
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class ProjectUserController : BaseController

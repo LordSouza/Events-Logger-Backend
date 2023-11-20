@@ -43,8 +43,12 @@ public class EntryController : BaseController
     /// <param name="datestart"></param>
     /// <param name="dateend"></param>
     /// <param name="hasfiles"></param>
+    /// <param name="username"></param>
+    /// <param name="projectname"></param>
+    /// <param name="entrydescription"></param>
+    /// <param name="usertimezone"></param>
     /// <returns></returns>
-    [HttpGet("all")]
+    [HttpGet()]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -56,7 +60,8 @@ public class EntryController : BaseController
         [FromQuery(Name = "HasFiles")] bool? hasfiles,
         [FromQuery(Name = "UserName")] string? username,
         [FromQuery(Name = "ProjectName")] string? projectname,
-        [FromQuery(Name = "EntryDescription")] string? entrydescription
+        [FromQuery(Name = "EntryDescription")] string? entrydescription,
+        [FromHeader(Name = "Date")] string usertimezone
         )
     {
         try
