@@ -43,8 +43,12 @@ public class EntryController : BaseController
     /// <param name="datestart"></param>
     /// <param name="dateend"></param>
     /// <param name="hasfiles"></param>
+    /// <param name="username"></param>
+    /// <param name="projectname"></param>
+    /// <param name="entrydescription"></param>
+    /// <param name="usertimezone"></param>
     /// <returns></returns>
-    [HttpGet("all")]
+    [HttpGet()]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -56,7 +60,8 @@ public class EntryController : BaseController
         [FromQuery(Name = "HasFiles")] bool? hasfiles,
         [FromQuery(Name = "UserName")] string? username,
         [FromQuery(Name = "ProjectName")] string? projectname,
-        [FromQuery(Name = "EntryDescription")] string? entrydescription
+        [FromQuery(Name = "EntryDescription")] string? entrydescription,
+        [FromHeader(Name = "Date")] string usertimezone
         )
     {
         try
@@ -302,7 +307,7 @@ public class EntryController : BaseController
             {
                 _response.StatusCode = HttpStatusCode.NotFound;
                 _response.IsSuccess = false;
-                _response.Messages!.Add($"Entry with {id} was not found");
+                _response.Messages!.Add($"Entry with ID:{id} was not found");
                 return NotFound(_response);
             }
 
@@ -335,14 +340,14 @@ public class EntryController : BaseController
     /// updated a entry the user has posted
     /// </summary>
     /// <param name="id"></param>
-    /// <param name="updateDTO"></param>
+    /// <param name="entryUpdateDTO"></param>
     /// <returns></returns>
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [HttpPut("{id:guid}", Name = "UpdateEntry")]
-    public async Task<ActionResult<APIResponse>> UpdateEntry(Guid id, [FromForm] UpdateEntryDTO updateDTO)
+    public async Task<ActionResult<APIResponse>> UpdateEntry(Guid id, [FromForm] UpdateEntryDTO entryUpdateDTO)
     {
         try
         {
@@ -372,7 +377,7 @@ public class EntryController : BaseController
                 _response.StatusCode = HttpStatusCode.NotFound;
                 return NotFound(_response);
             }
-            Entry model = _mapper.Map<Entry>(updateDTO);
+            Entry model = _mapper.Map<Entry>(entryUpdateDTO);
 
             await _unitOfWork.Entries.UpdateAsync(model);
             _response.Messages.Add("Entry update was successful.");

@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EventsLogger.Api.Controllers;
 
-[Route("api/[controller]")]
+[Route("api/Project/User")]
 [ApiController]
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class ProjectUserController : BaseController
@@ -137,6 +137,8 @@ public class ProjectUserController : BaseController
 
     /// <summary>
     /// EndPoint <c>AddNewUser<\c> add a new user to the project with a role
+    /// TODO fix:
+    /// accept photo
     /// </summary>
     /// <param name="createNewUserProjectDTO"></param>
     /// <returns></returns>
@@ -234,7 +236,7 @@ public class ProjectUserController : BaseController
     }
 
 
-    [HttpDelete("Users/Delete", Name = "DeleteUserFromProject")]
+    [HttpDelete("Delete", Name = "DeleteUserFromProject")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -328,10 +330,12 @@ public class ProjectUserController : BaseController
 
     /// <summary>
     /// EndPoint <c>AddUser<\c> add a existing user to the project with a role
+    /// TODO fix:
+    /// the manager can create a user with any role
     /// </summary>
     /// <param name="createUserProjectDTO"></param>
     /// <returns></returns>
-    [HttpPost("Users", Name = "AddUser")]
+    [HttpPost(Name = "AddUser")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -412,7 +416,7 @@ public class ProjectUserController : BaseController
     /// </summary>
     /// <param name="UserProjectDeleteDTO"></param>
     /// <returns></returns>
-    [HttpDelete("Users", Name = "RemoveUser")]
+    [HttpDelete(Name = "RemoveUser")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
