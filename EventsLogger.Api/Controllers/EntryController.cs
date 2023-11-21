@@ -282,7 +282,7 @@ public class EntryController : BaseController
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [HttpDelete("{id:guid}", Name = "DeleteEntry")]
@@ -342,7 +342,7 @@ public class EntryController : BaseController
     /// <param name="id"></param>
     /// <param name="entryUpdateDTO"></param>
     /// <returns></returns>
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -370,6 +370,7 @@ public class EntryController : BaseController
 
             var entryToChange = await _unitOfWork.Entries.GetAsync(u => u.Id == id);
 
+
             if (entryToChange == null)
             {
                 _response.Messages.Add($"Entry with {id} was not found");
@@ -377,13 +378,33 @@ public class EntryController : BaseController
                 _response.StatusCode = HttpStatusCode.NotFound;
                 return NotFound(_response);
             }
-            Entry model = _mapper.Map<Entry>(entryUpdateDTO);
+            if (entryToChange.UserId != loggedUser.Id)
+            {
+                _response.Messages.Add("You are not the owner of this Entry.");
+                _response.IsSuccess = false;
+                _response.StatusCode = HttpStatusCode.Unauthorized;
+                return Unauthorized(_response);
+            }
+            List<string> filesUrl = new();
+            if (entryUpdateDTO.Files != null)
+            {
+                foreach (var file in entryUpdateDTO.Files)
+                {
+                    var url = await UploadFile(file);
+                    filesUrl.Add(url);
+                }
+            }
+
+            Entry model = await _unitOfWork.Entries.GetAsync(u => u.Id == id);
+            model.Description = entryUpdateDTO.Description ?? model.Description;
+            model.FilesUrl = filesUrl ?? model.FilesUrl;
+
 
             await _unitOfWork.Entries.UpdateAsync(model);
             _response.Messages.Add("Entry update was successful.");
-            _response.StatusCode = HttpStatusCode.NoContent;
+            _response.StatusCode = HttpStatusCode.OK;
             _response.IsSuccess = true;
-            return StatusCode(StatusCodes.Status204NoContent, _response);
+            return Ok(_response);
         }
         catch (Exception ex)
         {

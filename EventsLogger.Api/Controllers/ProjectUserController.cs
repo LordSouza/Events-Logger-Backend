@@ -39,11 +39,11 @@ public class ProjectUserController : BaseController
     /// </summary>
     /// <param name="updateUserFromProjectDTO"></param>
     /// <returns></returns>
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [HttpPut("Users/Update", Name = "UpdateUserFromProject")]
+    [HttpPut(Name = "UpdateUserFromProject")]
     public async Task<ActionResult<APIResponse>> UpdateUserFromProject([FromBody] UpdateUserFromProjectDTO updateUserFromProjectDTO)
     {
         try
@@ -117,11 +117,17 @@ public class ProjectUserController : BaseController
                 var photoPath = await UploadFile(updateUserFromProjectDTO.File);
                 userToUpdate.PhotoPath = photoPath;
             }
+            userToUpdate.Name = updateUserFromProjectDTO.FirstName + " " + updateUserFromProjectDTO.LastName ?? userToUpdate.Name;
+            userToUpdate.Email = updateUserFromProjectDTO.Email ?? userToUpdate.Email;
+            // userToUpdate.PhotoPath =  ?? userToUpdate.PhotoPath;
+            userToUpdate.UserName = updateUserFromProjectDTO.UserName ?? userToUpdate.UserName;
+
 
 
             await _userManager.UpdateAsync(userToUpdate);
             _response.Messages.Add("the user was updated with success.");
-            _response.StatusCode = HttpStatusCode.NoContent;
+            _response.Result = _mapper.Map<UserDTO>(userToUpdate);
+            _response.StatusCode = HttpStatusCode.OK;
             _response.IsSuccess = true;
             return Ok(_response);
         }
@@ -142,13 +148,13 @@ public class ProjectUserController : BaseController
     /// </summary>
     /// <param name="createNewUserProjectDTO"></param>
     /// <returns></returns>
-    [HttpPost("Users/Create", Name = "AddNewUser")]
+    [HttpPost("Create", Name = "CreateNewUserProject")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<APIResponse>> AddNewUser([FromForm] CreateNewUserProjectDTO createNewUserProjectDTO)
+    public async Task<ActionResult<APIResponse>> CreateNewUserProject([FromForm] CreateNewUserProjectDTO createNewUserProjectDTO)
     {
         try
         {

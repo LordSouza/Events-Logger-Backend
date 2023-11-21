@@ -103,10 +103,9 @@ public class ProjectController : BaseController
 
 
             var project = await _unitOfWork.Projects.GetAsync(u => u.Id == id, includeProperties: "Address");
-
             if (project == null)
             {
-                _response.Messages.Add("You aren't part of a project.");
+                _response.Messages.Add("This project doesn't exists.");
                 _response.IsSuccess = false;
                 _response.StatusCode = HttpStatusCode.NotFound;
                 return NotFound(_response);
@@ -222,7 +221,7 @@ public class ProjectController : BaseController
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [HttpDelete("{id:guid}", Name = "DeleteProject")]
@@ -248,9 +247,8 @@ public class ProjectController : BaseController
                 return NotFound(_response);
             }
 
-            var projectUsers = await _unitOfWork.UsersProjects.GetAllAsync(r => r.ProjectId == project.Id);
-            var userPermission = projectUsers.FirstOrDefault(u => u.UserId == loggedUser.Id);
-            if (userPermission == null || userPermission.Role != "owner")
+            var projectUsers = await _unitOfWork.UsersProjects.GetAsync(r => r.ProjectId == project.Id && r.UserId == loggedUser.Id);
+            if (projectUsers == null || projectUsers.Role != "owner")
             {
                 _response.Messages.Add("You are not the owner of the project");
                 _response.IsSuccess = false;
@@ -263,8 +261,8 @@ public class ProjectController : BaseController
             await _unitOfWork.Projects.RemoveAsync(project);
             await _unitOfWork.Addresses.RemoveAsync(project.Address);
 
-            _response.StatusCode = HttpStatusCode.NoContent;
             _response.Messages.Add("The Project was deleted");
+            _response.StatusCode = HttpStatusCode.OK;
             _response.IsSuccess = true;
             return Ok(_response);
         }

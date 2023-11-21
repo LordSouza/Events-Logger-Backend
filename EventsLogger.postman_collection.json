@@ -93,14 +93,13 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/Entry/all",
+							"raw": "{{base_url}}/api/Entry",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
-								"Entry",
-								"all"
+								"Entry"
 							],
 							"query": [
 								{
@@ -131,6 +130,21 @@
 									"key": "dateend",
 									"value": "",
 									"description": "TODO optional",
+									"disabled": true
+								},
+								{
+									"key": "entrydescription",
+									"value": null,
+									"disabled": true
+								},
+								{
+									"key": "projectname",
+									"value": null,
+									"disabled": true
+								},
+								{
+									"key": "username",
+									"value": null,
 									"disabled": true
 								}
 							]
@@ -180,14 +194,14 @@
 							}
 						},
 						"url": {
-							"raw": "{{base_url}}/api/Entry/82862e8e-5967-44ac-91b7-9e52eca15a0b",
+							"raw": "{{base_url}}/api/Entry/22dba1ea-5d6b-477d-8e0d-e83b172324d3",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"Entry",
-								"82862e8e-5967-44ac-91b7-9e52eca15a0b"
+								"22dba1ea-5d6b-477d-8e0d-e83b172324d3"
 							]
 						},
 						"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
@@ -195,7 +209,7 @@
 					"response": []
 				},
 				{
-					"name": "Post data",
+					"name": "Create Entry",
 					"event": [
 						{
 							"listen": "test",
@@ -252,6 +266,70 @@
 								"api",
 								"Entry",
 								""
+							]
+						},
+						"description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Entry",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Successful POST request\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "projectid",
+									"value": "d8b9afa8-612b-497f-a03d-2dad32d0fdb1",
+									"type": "text"
+								},
+								{
+									"key": "Description",
+									"value": "lorem ipsum",
+									"type": "text"
+								},
+								{
+									"key": "Files",
+									"type": "file",
+									"src": "/C:/Users/lucas/Downloads/unificado (3).pdf"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/Entry/22dba1ea-5d6b-477d-8e0d-e83b172324d3",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"Entry",
+								"22dba1ea-5d6b-477d-8e0d-e83b172324d3"
 							]
 						},
 						"description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
@@ -627,14 +705,14 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/Project/76b8c76d-17f4-4a4d-97d9-eb0a8754c112",
+							"raw": "{{base_url}}/api/Project/2bb2084f-b89f-4d4a-b915-9b1ddeb8f62c",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"Project",
-								"76b8c76d-17f4-4a4d-97d9-eb0a8754c112"
+								"2bb2084f-b89f-4d4a-b915-9b1ddeb8f62c"
 							]
 						},
 						"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
@@ -692,6 +770,25 @@
 						"description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
 					},
 					"response": []
+				},
+				{
+					"name": "New Request",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/Project/e30d9a2a-e328-4c6b-afd0-e7296e3f52cf",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"Project",
+								"e30d9a2a-e328-4c6b-afd0-e7296e3f52cf"
+							]
+						}
+					},
+					"response": []
 				}
 			],
 			"auth": {
@@ -729,60 +826,7 @@
 			"name": "ProjectUser",
 			"item": [
 				{
-					"name": "RemoveUser from project",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Successful POST request\", function () {",
-									"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-									"});",
-									""
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"projectId\": \"76b8c76d-17f4-4a4d-97d9-eb0a8754c112\",\n    \"userId\": \"6bff690f-830b-45fa-b85d-0e8385cb0f1e\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/api/Project/Users",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"api",
-								"Project",
-								"Users"
-							]
-						},
-						"description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
-					},
-					"response": []
-				},
-				{
-					"name": "AddNewUser to project Copy",
+					"name": "Create User to projects",
 					"event": [
 						{
 							"listen": "test",
@@ -815,7 +859,7 @@
 							"formdata": [
 								{
 									"key": "projectId",
-									"value": "76b8c76d-17f4-4a4d-97d9-eb0a8754c112",
+									"value": "2bb2084f-b89f-4d4a-b915-9b1ddeb8f62c",
 									"type": "text"
 								},
 								{
@@ -835,7 +879,7 @@
 								},
 								{
 									"key": "email",
-									"value": "joao@email.com",
+									"value": "joao_algumacoisa@email.com",
 									"type": "text"
 								},
 								{
@@ -844,19 +888,26 @@
 									"description": "optional",
 									"type": "text",
 									"disabled": true
+								},
+								{
+									"key": "photo",
+									"description": "optional",
+									"type": "file",
+									"src": [],
+									"disabled": true
 								}
 							]
 						},
 						"url": {
-							"raw": "{{base_url}}/api/Project/Users/New",
+							"raw": "{{base_url}}/api/Project/User/Create",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"Project",
-								"Users",
-								"New"
+								"User",
+								"Create"
 							]
 						},
 						"description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
@@ -902,20 +953,278 @@
 							}
 						},
 						"url": {
-							"raw": "{{base_url}}/api/Project/Users/add",
+							"raw": "{{base_url}}/api/Project/User",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"Project",
-								"Users",
-								"add"
+								"User"
 							]
 						},
 						"description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
 					},
 					"response": []
+				},
+				{
+					"name": "Remove use from project",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"projectid\":\"\",\r\n    \"userid\":\"\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/Project/User",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"Project",
+								"User"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete a user from the site that are part of the project",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "projectid",
+									"value": "2bb2084f-b89f-4d4a-b915-9b1ddeb8f62c",
+									"type": "text"
+								},
+								{
+									"key": "userid",
+									"value": "764d29b3-596f-428f-814f-beda36ad229c",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/Project/User/Delete",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"Project",
+								"User",
+								"Delete"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"projectId\": \"2bb2084f-b89f-4d4a-b915-9b1ddeb8f62c\",\r\n  \"userId\": \"491dff28-0d57-4881-a772-d7dba5a46563\",\r\n  \"firstName\": \"mateus\",\r\n  \"lastName\": \"ramos\",\r\n  \"email\": \"mateus_gmail@gmail.com\",\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/Project/User",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"Project",
+								"User"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{token}}",
+						"type": "string"
+					}
+				]
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "ProjectEntry",
+			"item": [
+				{
+					"name": "Create Entry Project",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "UserId",
+									"value": "491dff28-0d57-4881-a772-d7dba5a46563",
+									"type": "text"
+								},
+								{
+									"key": "ProjectId",
+									"value": "2bb2084f-b89f-4d4a-b915-9b1ddeb8f62c",
+									"type": "text"
+								},
+								{
+									"key": "Description",
+									"value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse feugiat interdum iaculis. Donec et metus elit. Mauris vestibulum rutrum venenatis. Cras pulvinar aliquet rutrum. Maecenas tristique lacus massa, non egestas ex auctor in. Proin cursus feugiat ultricies. In ornare elementum arcu ac consequat. Nulla vehicula porttitor magna, a bibendum magna aliquet quis.",
+									"type": "text"
+								},
+								{
+									"key": "Files",
+									"type": "file",
+									"src": "/C:/Users/lucas/Downloads/CCO_PPC.pdf"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/Project/Entry",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"Project",
+								"Entry"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Entry Project",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "{{base_url}}/api/Project/Entry/ba83f4d2-2a24-402d-b20e-5fb36ab58cfd",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"Project",
+								"Entry",
+								"ba83f4d2-2a24-402d-b20e-5fb36ab58cfd"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Entry Project",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "Description",
+									"value": "ajsndoasndLorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus lobortis. ",
+									"type": "text"
+								},
+								{
+									"key": "Files",
+									"type": "file",
+									"src": "/C:/Users/lucas/Downloads/unificado (3).pdf"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/Project/Entry/22dba1ea-5d6b-477d-8e0d-e83b172324d3",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"Project",
+								"Entry",
+								"22dba1ea-5d6b-477d-8e0d-e83b172324d3"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{token}}",
+						"type": "string"
+					}
+				]
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
 				}
 			]
 		},
@@ -1010,12 +1319,12 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{base_url}}/Lucasaaa_oliver",
+					"raw": "{{base_url}}/joao_algumacoisa@email.com",
 					"host": [
 						"{{base_url}}"
 					],
 					"path": [
-						"Lucasaaa_oliver"
+						"joao_algumacoisa@email.com"
 					]
 				}
 			},
