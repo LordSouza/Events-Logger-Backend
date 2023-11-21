@@ -147,10 +147,10 @@ public class ProjectEntriesController : BaseController
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [HttpDelete("{id:guid}", Name = "DeleteEntry")]
+    [HttpDelete("{id:guid}", Name = "DeleteEntryProject")]
     public async Task<ActionResult<APIResponse>> DeleteEntry(Guid id)
     {
         try
@@ -213,11 +213,11 @@ public class ProjectEntriesController : BaseController
     /// <param name="id"></param>
     /// <param name="entryUpdateDTO"></param>
     /// <returns></returns>
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [HttpPut("{id:guid}", Name = "UpdateEntry")]
+    [HttpPut("{id:guid}", Name = "UpdateEntryProject")]
     public async Task<ActionResult<APIResponse>> UpdateEntry(Guid id, [FromForm] UpdateEntryDTO entryUpdateDTO)
     {
         try
@@ -256,13 +256,25 @@ public class ProjectEntriesController : BaseController
                 _response.StatusCode = HttpStatusCode.Unauthorized;
                 return Unauthorized(_response);
             }
-            Entry model = _mapper.Map<Entry>(entryUpdateDTO);
+            List<string> filesUrl = new();
+            if (entryUpdateDTO.Files != null)
+            {
+                foreach (var file in entryUpdateDTO.Files)
+                {
+                    var url = await UploadFile(file);
+                    filesUrl.Add(url);
+                }
+            }
+
+            Entry model = await _unitOfWork.Entries.GetAsync(u => u.Id == id);
+            model.Description = entryUpdateDTO.Description ?? model.Description;
+            model.FilesUrl = filesUrl ?? model.FilesUrl;
 
             await _unitOfWork.Entries.UpdateAsync(model);
             _response.Messages.Add("Entry update was successful.");
-            _response.StatusCode = HttpStatusCode.NoContent;
+            _response.StatusCode = HttpStatusCode.OK;
             _response.IsSuccess = true;
-            return StatusCode(StatusCodes.Status204NoContent, _response);
+            return Ok(_response);
         }
         catch (Exception ex)
         {
