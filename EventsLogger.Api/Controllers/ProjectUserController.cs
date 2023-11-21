@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EventsLogger.Api.Controllers;
 
-[Route("api/[controller]")]
+[Route("api/Project/User")]
 [ApiController]
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class ProjectUserController : BaseController
@@ -39,11 +39,11 @@ public class ProjectUserController : BaseController
     /// </summary>
     /// <param name="updateUserFromProjectDTO"></param>
     /// <returns></returns>
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [HttpPut("Users/Update", Name = "UpdateUserFromProject")]
+    [HttpPut(Name = "UpdateUserFromProject")]
     public async Task<ActionResult<APIResponse>> UpdateUserFromProject([FromBody] UpdateUserFromProjectDTO updateUserFromProjectDTO)
     {
         try
@@ -117,11 +117,17 @@ public class ProjectUserController : BaseController
                 var photoPath = await UploadFile(updateUserFromProjectDTO.File);
                 userToUpdate.PhotoPath = photoPath;
             }
+            userToUpdate.Name = updateUserFromProjectDTO.FirstName + " " + updateUserFromProjectDTO.LastName ?? userToUpdate.Name;
+            userToUpdate.Email = updateUserFromProjectDTO.Email ?? userToUpdate.Email;
+            // userToUpdate.PhotoPath =  ?? userToUpdate.PhotoPath;
+            userToUpdate.UserName = updateUserFromProjectDTO.UserName ?? userToUpdate.UserName;
+
 
 
             await _userManager.UpdateAsync(userToUpdate);
             _response.Messages.Add("the user was updated with success.");
-            _response.StatusCode = HttpStatusCode.NoContent;
+            _response.Result = _mapper.Map<UserDTO>(userToUpdate);
+            _response.StatusCode = HttpStatusCode.OK;
             _response.IsSuccess = true;
             return Ok(_response);
         }
@@ -137,16 +143,18 @@ public class ProjectUserController : BaseController
 
     /// <summary>
     /// EndPoint <c>AddNewUser<\c> add a new user to the project with a role
+    /// TODO fix:
+    /// accept photo
     /// </summary>
     /// <param name="createNewUserProjectDTO"></param>
     /// <returns></returns>
-    [HttpPost("Users/Create", Name = "AddNewUser")]
+    [HttpPost("Create", Name = "CreateNewUserProject")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<APIResponse>> AddNewUser([FromForm] CreateNewUserProjectDTO createNewUserProjectDTO)
+    public async Task<ActionResult<APIResponse>> CreateNewUserProject([FromForm] CreateNewUserProjectDTO createNewUserProjectDTO)
     {
         try
         {
@@ -234,7 +242,7 @@ public class ProjectUserController : BaseController
     }
 
 
-    [HttpDelete("Users/Delete", Name = "DeleteUserFromProject")]
+    [HttpDelete("Delete", Name = "DeleteUserFromProject")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -328,10 +336,12 @@ public class ProjectUserController : BaseController
 
     /// <summary>
     /// EndPoint <c>AddUser<\c> add a existing user to the project with a role
+    /// TODO fix:
+    /// the manager can create a user with any role
     /// </summary>
     /// <param name="createUserProjectDTO"></param>
     /// <returns></returns>
-    [HttpPost("Users", Name = "AddUser")]
+    [HttpPost(Name = "AddUser")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -412,7 +422,7 @@ public class ProjectUserController : BaseController
     /// </summary>
     /// <param name="UserProjectDeleteDTO"></param>
     /// <returns></returns>
-    [HttpDelete("Users", Name = "RemoveUser")]
+    [HttpDelete(Name = "RemoveUser")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

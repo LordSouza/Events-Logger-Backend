@@ -150,7 +150,7 @@ public class UserController : BaseController
     /// </summary>
     /// <param name="updateUserDTO"></param>
     /// <returns></returns>
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -192,9 +192,9 @@ public class UserController : BaseController
             await _userManager.UpdateAsync(loggedUser);
 
             _response.Messages.Add("User updated with success.");
-            _response.StatusCode = HttpStatusCode.NoContent;
+            _response.StatusCode = HttpStatusCode.OK;
             _response.IsSuccess = true;
-            return StatusCode(StatusCodes.Status204NoContent, _response);
+            return Ok(_response);
         }
         catch (Exception ex)
         {
