@@ -307,7 +307,7 @@ public class EntryController : BaseController
             {
                 _response.StatusCode = HttpStatusCode.NotFound;
                 _response.IsSuccess = false;
-                _response.Messages!.Add($"Entry with {id} was not found");
+                _response.Messages!.Add($"Entry with ID:{id} was not found");
                 return NotFound(_response);
             }
 
@@ -340,14 +340,14 @@ public class EntryController : BaseController
     /// updated a entry the user has posted
     /// </summary>
     /// <param name="id"></param>
-    /// <param name="updateDTO"></param>
+    /// <param name="entryUpdateDTO"></param>
     /// <returns></returns>
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [HttpPut("{id:guid}", Name = "UpdateEntry")]
-    public async Task<ActionResult<APIResponse>> UpdateEntry(Guid id, [FromForm] UpdateEntryDTO updateDTO)
+    public async Task<ActionResult<APIResponse>> UpdateEntry(Guid id, [FromForm] UpdateEntryDTO entryUpdateDTO)
     {
         try
         {
@@ -377,7 +377,7 @@ public class EntryController : BaseController
                 _response.StatusCode = HttpStatusCode.NotFound;
                 return NotFound(_response);
             }
-            Entry model = _mapper.Map<Entry>(updateDTO);
+            Entry model = _mapper.Map<Entry>(entryUpdateDTO);
 
             await _unitOfWork.Entries.UpdateAsync(model);
             _response.Messages.Add("Entry update was successful.");
