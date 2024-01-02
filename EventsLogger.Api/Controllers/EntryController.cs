@@ -61,7 +61,9 @@ public class EntryController : BaseController
         [FromQuery(Name = "UserName")] string? username,
         [FromQuery(Name = "ProjectName")] string? projectname,
         [FromQuery(Name = "EntryDescription")] string? entrydescription,
-        [FromHeader(Name = "Date")] string usertimezone
+        [FromQuery] int pageSize = 3, int pageNumber = 1
+
+
         )
     {
         try
@@ -83,7 +85,7 @@ public class EntryController : BaseController
 
             foreach (var project in projectList)
             {
-                EntryList.AddRange(await _unitOfWork.Entries.GetAllAsync(u => u.UserId == loggedUser.Id, includeProperties: "User,Project"));
+                EntryList.AddRange(await _unitOfWork.Entries.GetAllAsync(u => u.UserId == project.UserId, includeProperties: "User,Project", pageSize: pageSize, pageNumber: pageNumber));
             }
             IEnumerable<Entry> EntryListFiler = EntryList.AsEnumerable();
 
@@ -132,7 +134,7 @@ public class EntryController : BaseController
 
             EntryListFiler = EntryListFiler.OrderByDescending(u => u.CreatedDate);
 
-            _response.Result = _mapper.Map<IEnumerable<EntryDTO>>(EntryListFiler);
+            _response.Result = _mapper.Map<IEnumerable<EntryDTO>>(EntryListFiler.Distinct());
             _response.StatusCode = HttpStatusCode.OK;
             _response.Messages.Add("Success.");
             return Ok(_response);

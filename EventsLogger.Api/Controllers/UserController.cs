@@ -175,8 +175,17 @@ public class UserController : BaseController
                 return BadRequest(_response);
             }
 
+            if (updateUserDTO.FirstName != null || updateUserDTO.LastName != null)
+            {
+                loggedUser.Name = updateUserDTO.FirstName + " " + updateUserDTO.LastName;
+            }
+            else
+            {
+                loggedUser.Name = loggedUser.Name;
 
-            loggedUser.Name = updateUserDTO.FirstName + " " + updateUserDTO.LastName ?? loggedUser.Name;
+
+            }
+
             loggedUser.Email = updateUserDTO.Email ?? loggedUser.Email;
             if (updateUserDTO.File != null)
             {
