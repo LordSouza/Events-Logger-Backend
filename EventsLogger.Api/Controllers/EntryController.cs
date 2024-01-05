@@ -60,10 +60,7 @@ public class EntryController : BaseController
         [FromQuery(Name = "HasFiles")] bool? hasfiles,
         [FromQuery(Name = "UserName")] string? username,
         [FromQuery(Name = "ProjectName")] string? projectname,
-        [FromQuery(Name = "EntryDescription")] string? entrydescription,
-        [FromQuery] int pageSize = 3, int pageNumber = 1
-
-
+        [FromQuery(Name = "EntryDescription")] string? entrydescription
         )
     {
         try
@@ -85,7 +82,7 @@ public class EntryController : BaseController
 
             foreach (var project in projectList)
             {
-                EntryList.AddRange(await _unitOfWork.Entries.GetAllAsync(u => u.UserId == project.UserId, includeProperties: "User,Project", pageSize: pageSize, pageNumber: pageNumber));
+                EntryList.AddRange(await _unitOfWork.Entries.GetAllAsync(u => u.UserId == project.UserId, includeProperties: "User,Project"));
             }
             IEnumerable<Entry> EntryListFiler = EntryList.AsEnumerable();
 
@@ -129,7 +126,15 @@ public class EntryController : BaseController
             }
             if (hasfiles != null)
             {
-                EntryListFiler = EntryListFiler.Where(u => u.FilesUrl.Count > 0);
+                if (hasfiles == false)
+                {
+                    EntryListFiler = EntryListFiler.Where(u => u.FilesUrl.Count == 0);
+
+                }
+                else
+                {
+                    EntryListFiler = EntryListFiler.Where(u => u.FilesUrl.Count > 0);
+                }
             }
 
             EntryListFiler = EntryListFiler.OrderByDescending(u => u.CreatedDate);
