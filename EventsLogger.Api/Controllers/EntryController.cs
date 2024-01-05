@@ -60,8 +60,7 @@ public class EntryController : BaseController
         [FromQuery(Name = "HasFiles")] bool? hasfiles,
         [FromQuery(Name = "UserName")] string? username,
         [FromQuery(Name = "ProjectName")] string? projectname,
-        [FromQuery(Name = "EntryDescription")] string? entrydescription,
-        [FromHeader(Name = "Date")] string usertimezone
+        [FromQuery(Name = "EntryDescription")] string? entrydescription
         )
     {
         try
@@ -83,7 +82,7 @@ public class EntryController : BaseController
 
             foreach (var project in projectList)
             {
-                EntryList.AddRange(await _unitOfWork.Entries.GetAllAsync(u => u.UserId == loggedUser.Id, includeProperties: "User,Project"));
+                EntryList.AddRange(await _unitOfWork.Entries.GetAllAsync(u => u.UserId == project.UserId, includeProperties: "User,Project"));
             }
             IEnumerable<Entry> EntryListFiler = EntryList.AsEnumerable();
 
@@ -127,12 +126,20 @@ public class EntryController : BaseController
             }
             if (hasfiles != null)
             {
-                EntryListFiler = EntryListFiler.Where(u => u.FilesUrl.Count > 0);
+                if (hasfiles == false)
+                {
+                    EntryListFiler = EntryListFiler.Where(u => u.FilesUrl.Count == 0);
+
+                }
+                else
+                {
+                    EntryListFiler = EntryListFiler.Where(u => u.FilesUrl.Count > 0);
+                }
             }
 
             EntryListFiler = EntryListFiler.OrderByDescending(u => u.CreatedDate);
 
-            _response.Result = _mapper.Map<IEnumerable<EntryDTO>>(EntryListFiler);
+            _response.Result = _mapper.Map<IEnumerable<EntryDTO>>(EntryListFiler.Distinct());
             _response.StatusCode = HttpStatusCode.OK;
             _response.Messages.Add("Success.");
             return Ok(_response);

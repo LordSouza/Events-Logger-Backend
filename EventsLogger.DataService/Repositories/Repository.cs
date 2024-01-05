@@ -55,11 +55,12 @@ public class Repository<T> : IRepository<T> where T : class
         {
             query = query.Where(filter);
         }
+
         if (includeProperties != null)
         {
-            foreach (var includePro in includeProperties.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+            foreach (var includeProp in includeProperties.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
             {
-                query = query.Include(includePro);
+                query = query.Include(includeProp);
             }
         }
         return await query.ToListAsync();
@@ -81,4 +82,6 @@ public class Repository<T> : IRepository<T> where T : class
     {
         await _context.SaveChangesAsync();
     }
+
+
 }
